@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * @file: includes/class-postman-admin.php
+ * @description: Admin UI for generating and downloading Postman Collection.
+ * @dependencies: Postman_Generator, Postman_Options
+ * @created: 2025-08-19
+ */
 class Postman_Admin {
 
     private const MENU_SLUG = 'postman-collection-admin';

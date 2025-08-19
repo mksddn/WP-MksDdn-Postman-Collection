@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * @file: includes/class-postman-generator.php
+ * @description: Build and export Postman Collection JSON structure.
+ * @dependencies: Postman_Options, Postman_Routes
+ * @created: 2025-08-19
+ */
 class Postman_Generator {
 
     private const COLLECTION_SCHEMA = 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json';

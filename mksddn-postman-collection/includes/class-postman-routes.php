@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * @file: includes/class-postman-routes.php
+ * @description: Build request items for Postman Collection (core entities, CPTs, options, pages).
+ * @dependencies: WordPress REST API
+ * @created: 2025-08-19
+ */
 class Postman_Routes {
 
 

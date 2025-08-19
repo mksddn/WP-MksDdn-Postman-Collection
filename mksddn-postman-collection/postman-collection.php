@@ -53,5 +53,6 @@ add_action('init', function(): void {
 
 // Register WP-CLI commands if available
 if (defined('WP_CLI') && WP_CLI) {
-    WP_CLI::add_command('mksddn-postman', [new Postman_CLI(), 'export']);
+    // Register command namespace; subcommands are defined as class methods (e.g., `export`).
+    WP_CLI::add_command('mksddn-postman', 'Postman_CLI');
 }

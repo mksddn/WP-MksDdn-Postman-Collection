@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * @file: includes/class-postman-options.php
+ * @description: Discover options pages via REST API or route introspection.
+ * @dependencies: WordPress REST Server
+ * @created: 2025-08-19
+ */
 class Postman_Options {
 
     private const OPTIONS_API_ENDPOINT = '/custom/v1/options';
