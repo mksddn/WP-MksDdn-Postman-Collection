@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<ruleset name="MksDdn Postman Collection WPCS">
+  <description>WordPress Coding Standards and PHPCompatibility checks (local)</description>
+
+  <file>mksddn-postman-collection</file>
+
+  <arg value="-s"/>
+  <arg name="extensions" value="php"/>
+  <arg name="basepath" value="."/>
+  <arg name="parallel" value="4"/>
+
+  <config name="testVersion" value="8.1-"/>
+
+  <rule ref="WordPress"/>
+  <rule ref="WordPress-Core"/>
+  <rule ref="WordPress-Docs"/>
+  <rule ref="WordPress-Extra"/>
+  <rule ref="PHPCompatibilityWP"/>
+
+  <exclude-pattern>vendor/*</exclude-pattern>
+  <exclude-pattern>node_modules/*</exclude-pattern>
+</ruleset>
+
