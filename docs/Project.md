@@ -47,9 +47,9 @@ flowchart TD
 - В планах: добавить собственные фильтры для модификации элементов коллекции и переменных (см. дорожную карту).
 
 ### Требования и совместимость
-- Требования (предлагаемые, уточнить в QA):
-  - WordPress ≥ 6.2
-  - PHP ≥ 7.4 (желательно 8.0+)
+- Требования:
+  - WordPress ≥ 6.2 (Tested up to 6.6)
+  - PHP ≥ 8.1
 - Безопасность:
   - Защита прямого доступа через `ABSPATH`
   - Проверка прав `manage_options` и `check_admin_referer` для генерации
@@ -60,8 +60,8 @@ flowchart TD
   - Автозагрузчик классов, отсутствие тяжёлых зависимостей
 
 ### Соответствие WordPress Plugin Check (PCP)
-- К заголовкам плагина добавить: `Requires at least`, `Tested up to`, `Requires PHP`, `Text Domain`, `Domain Path`, `License`, `License URI`, `Update URI` (при необходимости), `Author URI`.
-- I18n: добавить `load_plugin_textdomain`, обернуть строки в переводимые функции `__()/_e()`; подготовить `.pot`.
+- Заголовки плагина: `Requires at least`, `Tested up to`, `Requires PHP`, `Text Domain: mksddn-postman-collection`, `Domain Path: /languages`, `License`, `License URI`, `Author URI`, `Plugin URI`.
+- I18n: добавить `load_plugin_textdomain('mksddn-postman-collection')`, обернуть строки UI в `__()/esc_html__()`; подготовить `.pot`.
 - Экранирование всего HTML/атрибутов в админке.
 - PHPCS (WordPress Coding Standards), PHPCompatibility.
 - Readme.txt в формате WordPress.org с тегами, кратким/полным описанием, установкой, Changelog.

@@ -21,8 +21,8 @@ class Postman_Admin {
 
     public function add_admin_menu(): void {
         add_menu_page(
-            'Postman Collection',
-            'Postman Collection',
+            esc_html__('Postman Collection', POSTMAN_PLUGIN_TEXT_DOMAIN),
+            esc_html__('Postman Collection', POSTMAN_PLUGIN_TEXT_DOMAIN),
             self::CAPABILITY,
             self::MENU_SLUG,
             $this->admin_page(...),
@@ -112,28 +112,37 @@ class Postman_Admin {
 
 
     private function get_selected_page_slugs(): array {
-        return (array) ($_POST['custom_page_slugs'] ?? []);
+        $slugs = (array) ($_POST['custom_page_slugs'] ?? []);
+        return array_values(array_filter(array_map('sanitize_title', $slugs)));
     }
 
 
     private function get_selected_post_slugs(): array {
-        return (array) ($_POST['custom_post_slugs'] ?? []);
+        $slugs = (array) ($_POST['custom_post_slugs'] ?? []);
+        return array_values(array_filter(array_map('sanitize_title', $slugs)));
     }
 
 
     private function get_selected_custom_slugs(): array {
-        return (array) ($_POST['custom_post_type_slugs'] ?? []);
+        $result = [];
+        $incoming = (array) ($_POST['custom_post_type_slugs'] ?? []);
+        foreach ($incoming as $type => $slugs) {
+            $type_key = sanitize_key((string) $type);
+            $result[$type_key] = array_values(array_filter(array_map('sanitize_title', (array) $slugs)));
+        }
+        return $result;
     }
 
 
     private function get_selected_options_pages(): array {
-        return (array) ($_POST['options_pages'] ?? []);
+        $pages = (array) ($_POST['options_pages'] ?? []);
+        return array_values(array_filter(array_map('sanitize_key', $pages)));
     }
 
 
     private function render_admin_page(array $data): void {
         echo '<div class="wrap">';
-        echo '<h1>Generate Postman Collection</h1>';
+        echo '<h1>' . esc_html__('Generate Postman Collection', POSTMAN_PLUGIN_TEXT_DOMAIN) . '</h1>';
 
         $this->render_form($data);
         $this->render_javascript();
@@ -147,19 +156,19 @@ class Postman_Admin {
         wp_nonce_field(self::NONCE_ACTION);
         echo '<input type="hidden" name="action" value="generate_postman_collection">';
 
-        echo '<h3>Add individual requests for pages:</h3>';
+        echo '<h3>' . esc_html__('Add individual requests for pages:', POSTMAN_PLUGIN_TEXT_DOMAIN) . '</h3>';
         $this->render_selection_buttons();
         $this->render_pages_list($data['pages'], $data['selected_page_slugs']);
 
-        echo '<br><button class="button button-primary" name="generate_postman">Generate and download collection</button>';
+        echo '<br><button class="button button-primary" name="generate_postman">' . esc_html__('Generate and download collection', POSTMAN_PLUGIN_TEXT_DOMAIN) . '</button>';
         echo '</form>';
     }
 
 
     private function render_selection_buttons(): void {
         echo '<div style="margin-bottom: 10px;">';
-        echo '<button type="button" class="button" onclick="selectAll(\'custom_page_slugs\')">Select All</button> ';
-        echo '<button type="button" class="button" onclick="deselectAll(\'custom_page_slugs\')">Deselect All</button>';
+        echo '<button type="button" class="button" onclick="selectAll(\'custom_page_slugs\')">' . esc_html__('Select All', POSTMAN_PLUGIN_TEXT_DOMAIN) . '</button> ';
+        echo '<button type="button" class="button" onclick="deselectAll(\'custom_page_slugs\')">' . esc_html__('Deselect All', POSTMAN_PLUGIN_TEXT_DOMAIN) . '</button>';
         echo '</div>';
     }
 
@@ -199,7 +208,7 @@ class Postman_Admin {
 
     public function handle_generation(): void {
         if (!current_user_can(self::CAPABILITY) || !check_admin_referer(self::NONCE_ACTION)) {
-            wp_die('Недостаточно прав или неверный nonce.');
+            wp_die(esc_html__('Insufficient permissions or invalid nonce.', POSTMAN_PLUGIN_TEXT_DOMAIN));
         }
 
         $selected_data = [

@@ -7,7 +7,7 @@
 
 ### Вопросы и ответы
 1. Минимальные версии окружения
-   - Ответ: `Requires at least: 6.2`, `Tested up to: 6.6`, `Requires PHP: 7.4` (рекомендуем 8.0+).
+   - Ответ: `Requires at least: 6.2`, `Tested up to: 6.6`, `Requires PHP: 8.1`.
 2. Слаг и text-domain
    - Ответ: использовать `mksddn-postman-collection` для каталога и `Text Domain: mksddn-postman-collection` (совпадает с именем директории плагина).
 3. Лицензия
