@@ -23,7 +23,7 @@ class Postman_Admin {
         add_menu_page(
             esc_html__('Postman Collection', POSTMAN_PLUGIN_TEXT_DOMAIN),
             esc_html__('Postman Collection', POSTMAN_PLUGIN_TEXT_DOMAIN),
-            self::CAPABILITY,
+            $this->get_required_capability(),
             self::MENU_SLUG,
             $this->admin_page(...),
             'dashicons-share-alt2',
@@ -33,7 +33,7 @@ class Postman_Admin {
 
 
     public function admin_page(): void {
-        if (!current_user_can(self::CAPABILITY)) {
+        if (!current_user_can($this->get_required_capability())) {
             return;
         }
 
@@ -207,10 +207,18 @@ class Postman_Admin {
 
 
     public function handle_generation(): void {
-        if (!current_user_can(self::CAPABILITY) || !check_admin_referer(self::NONCE_ACTION)) {
+        if (!current_user_can($this->get_required_capability()) || !check_admin_referer(self::NONCE_ACTION)) {
             wp_die(esc_html__('Insufficient permissions or invalid nonce.', POSTMAN_PLUGIN_TEXT_DOMAIN));
         }
-
+    
+    private function get_required_capability(): string {
+        /**
+         * Filter required capability for accessing plugin admin page and actions.
+         *
+         * @param string $capability Default capability.
+         */
+        return (string) apply_filters('mksddn_postman_capability', self::CAPABILITY);
+    }
         $selected_data = [
             'page_slugs' => $this->get_selected_page_slugs(),
             'post_slugs' => $this->get_selected_post_slugs(),

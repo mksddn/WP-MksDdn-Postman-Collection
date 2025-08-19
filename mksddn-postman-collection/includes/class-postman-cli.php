@@ -1,6 +1,12 @@
 <?php
 
 /**
+ * @file: includes/class-postman-cli.php
+ * @description: WP-CLI command to export Postman Collection JSON for the plugin.
+ * @dependencies: Postman_Generator
+ * @created: 2025-08-19
+ */
+/**
  * WP-CLI commands for MksDdn Postman Collection.
  */
 class Postman_CLI {
