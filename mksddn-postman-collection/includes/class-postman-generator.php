@@ -46,7 +46,7 @@ class Postman_Generator {
     private function filter_custom_post_types(array $post_types): array {
         $custom_post_types = [];
         foreach ($post_types as $post_type) {
-            if (!in_array($post_type->name, ['page', 'post', 'attachment'])) {
+            if (!in_array($post_type->name, ['page', 'post', 'attachment'], true)) {
                 $custom_post_types[$post_type->name] = $post_type;
             }
         }
@@ -103,7 +103,7 @@ class Postman_Generator {
 
 
     private function download_collection(array $collection): void {
-        $json = json_encode($collection, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $json = wp_json_encode($collection, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
         header('Content-Type: application/json');
         header('Content-Disposition: attachment; filename="postman_collection.json"');

@@ -35,14 +35,14 @@ class Postman_Routes {
                     'header'      => [],
                     'url'         => [
                         'raw'   => (
-                            in_array($entity, ['pages', 'posts'])
+                            in_array($entity, ['pages', 'posts'], true)
                             ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=id,slug,title', $entity)
                             : '{{baseUrl}}/wp-json/wp/v2/' . $entity
                         ),
                         'host'  => ['{{baseUrl}}'],
                         'path'  => ['wp-json', 'wp', 'v2', $entity],
                         'query' => (
-                            in_array($entity, ['pages', 'posts'])
+                            in_array($entity, ['pages', 'posts'], true)
                             ? [
                                 [
                                     'key'   => '_fields',
@@ -64,7 +64,7 @@ class Postman_Routes {
                     'header'      => [],
                     'url'         => [
                         'raw'   => (
-                            in_array($entity, ['pages', 'posts'])
+                            in_array($entity, ['pages', 'posts'], true)
                             ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=', $entity) . ($entity === 'pages' ? 'sample-page' : 'hello-world') . '&acf_format=standard&_fields=title,acf,content'
                             : sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=', $entity) . ($entity === 'categories' ? 'uncategorized' : 'example')
                         ),
@@ -144,7 +144,7 @@ class Postman_Routes {
                     ],
                     'body'        => [
                         'mode' => 'raw',
-                        'raw'  => json_encode(
+                        'raw'  => wp_json_encode(
                             [
                                 'title'   => 'Sample ' . $singular . ' Title',
                                 'content' => 'Sample ' . $singular . ' content here.',
@@ -176,7 +176,7 @@ class Postman_Routes {
                     ],
                     'body'        => [
                         'mode' => 'raw',
-                        'raw'  => json_encode(
+                        'raw'  => wp_json_encode(
                             [
                                 'title'   => 'Updated ' . $singular . ' Title',
                                 'content' => 'Updated ' . $singular . ' content here.',
@@ -219,7 +219,7 @@ class Postman_Routes {
     }
 
 
-    public function get_options_routes($options_pages, array $options_pages_data): array {
+    public function get_options_routes(array $options_pages, array $options_pages_data): array {
         if ($options_pages === []) {
             return [];
         }
@@ -270,7 +270,7 @@ class Postman_Routes {
     }
 
 
-    public function get_custom_post_type_routes($custom_post_types): array {
+    public function get_custom_post_type_routes(array $custom_post_types): array {
         $custom_routes = [];
 
         foreach ($custom_post_types as $post_type_name => $post_type_obj) {
@@ -298,7 +298,7 @@ class Postman_Routes {
     }
 
 
-    private function get_forms_routes($rest_base, string $type_label): array {
+    private function get_forms_routes(string $rest_base, string $type_label): array {
         $folder_items = [];
 
         // List for Forms
@@ -370,7 +370,7 @@ class Postman_Routes {
                             ],
                             'body'        => [
                                 'mode' => 'raw',
-                                'raw'  => json_encode($body_fields, JSON_PRETTY_PRINT),
+                                'raw'  => wp_json_encode($body_fields, JSON_PRETTY_PRINT),
                             ],
                             'url'         => [
                                 'raw'  => sprintf('{{baseUrl}}/wp-json/wp/v2/forms/%s/submit', $slug),
@@ -415,14 +415,14 @@ class Postman_Routes {
                 'header'      => [],
                 'url'         => [
                     'raw'   => (
-                        in_array($post_type_name, ['pages', 'posts'])
+                        in_array($post_type_name, ['pages', 'posts'], true)
                         ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=', $post_type_name) . ($post_type_name === 'pages' ? 'sample-page' : 'hello-world') . '&acf_format=standard&_fields=title,acf,content'
                         : sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=', $post_type_name) . ($post_type_name === 'categories' ? 'uncategorized' : 'example')
                     ),
                     'host'  => ['{{baseUrl}}'],
                     'path'  => ['wp-json', 'wp', 'v2', $post_type_name],
                     'query' => (
-                        in_array($post_type_name, ['pages', 'posts'])
+                        in_array($post_type_name, ['pages', 'posts'], true)
                         ? [
                             [
                                 'key'   => 'slug',
@@ -489,7 +489,7 @@ class Postman_Routes {
                 ],
                 'body'        => [
                     'mode' => 'raw',
-                    'raw'  => json_encode(
+                    'raw'  => wp_json_encode(
                         [
                             'title'   => 'Sample ' . $singular_label . ' Title',
                             'content' => 'Sample ' . $singular_label . ' content here.',
@@ -518,7 +518,7 @@ class Postman_Routes {
                 ],
                 'body'        => [
                     'mode' => 'raw',
-                    'raw'  => json_encode(
+                    'raw'  => wp_json_encode(
                         [
                             'title'   => 'Updated ' . $singular_label . ' Title',
                             'content' => 'Updated ' . $singular_label . ' content here.',
@@ -550,7 +550,7 @@ class Postman_Routes {
     }
 
 
-    public function get_individual_page_routes($selected_page_slugs): array {
+    public function get_individual_page_routes(array $selected_page_slugs): array {
         $individual_routes = [];
 
         foreach ($selected_page_slugs as $slug) {
@@ -595,7 +595,7 @@ class Postman_Routes {
     }
 
 
-    public function get_variables($custom_post_types): array {
+    public function get_variables(array $custom_post_types): array {
         $variables = [
             [
                 'key'   => 'baseUrl',

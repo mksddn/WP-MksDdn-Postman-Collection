@@ -22,7 +22,7 @@ Features:
 == Installation ==
 1. Upload the `mksddn-postman-collection` folder to the `/wp-content/plugins/` directory.
 2. Activate the plugin through the 'Plugins' menu in WordPress.
-3. Go to Tools → Postman Collection to generate and download the collection.
+3. In the admin sidebar, open “Postman Collection” to generate and download the collection.
 
 == Frequently Asked Questions ==
 = Does it support multisite? =

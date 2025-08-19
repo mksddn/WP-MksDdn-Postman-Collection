@@ -70,7 +70,7 @@ class Postman_Admin {
     private function filter_custom_post_types(array $post_types): array {
         $custom_post_types = [];
         foreach ($post_types as $post_type) {
-            if (!in_array($post_type->name, ['page', 'post', 'attachment'])) {
+            if (!in_array($post_type->name, ['page', 'post', 'attachment'], true)) {
                 $custom_post_types[$post_type->name] = $post_type;
             }
         }
@@ -183,7 +183,7 @@ class Postman_Admin {
         echo '<ul style="max-height:200px;overflow:auto;border:1px solid #eee;padding:10px;margin-bottom:20px;">';
         foreach ($pages as $page) {
             $slug = $page->post_name;
-            $checked = in_array($slug, $selected_slugs) ? 'checked' : '';
+            $checked = in_array($slug, $selected_slugs, true) ? 'checked' : '';
             echo '<li><label><input type="checkbox" name="custom_page_slugs[]" value="' . esc_attr($slug) . '" ' . $checked . '> ' . esc_html($page->post_title) . ' <span style="color:#888">(' . esc_html($slug) . ')</span></label></li>';
         }
 

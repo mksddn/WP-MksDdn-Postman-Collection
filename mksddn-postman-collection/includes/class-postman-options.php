@@ -59,7 +59,7 @@ class Postman_Options {
     }
 
 
-    private function load_from_api($rest_server): void {
+    private function load_from_api(WP_REST_Server $rest_server): void {
         $request = new WP_REST_Request('GET', self::OPTIONS_API_ENDPOINT);
         $response = $rest_server->dispatch($request);
 
