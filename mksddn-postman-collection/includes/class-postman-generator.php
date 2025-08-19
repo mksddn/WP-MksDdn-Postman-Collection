@@ -26,6 +26,17 @@ class Postman_Generator {
     }
 
 
+    /**
+     * Build collection and return as array without sending download headers.
+     * Intended for programmatic usage (e.g., WP-CLI).
+     */
+    public function generate_collection_array(array $selected_page_slugs): array {
+        $post_types = get_post_types(['public' => true], 'objects');
+        $custom_post_types = $this->filter_custom_post_types($post_types);
+        return $this->build_collection($custom_post_types, $selected_page_slugs);
+    }
+
+
     private function filter_custom_post_types(array $post_types): array {
         $custom_post_types = [];
         foreach ($post_types as $post_type) {

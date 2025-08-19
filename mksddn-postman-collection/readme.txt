@@ -31,6 +31,12 @@ Yes. It works at the site level. Network-specific screens are not required.
 = Does it require ACF? =
 No. It supports ACF fields if present for pages and posts, but it does not require ACF to work.
 
+= Is there a WP-CLI command? =
+Yes. Use:
+`wp mksddn-postman export --file=postman_collection.json`
+or print to stdout:
+`wp mksddn-postman export --pages=home,about`
+
 == Screenshots ==
 1. Admin screen with page selection and download button.
 

@@ -50,3 +50,8 @@ add_action('plugins_loaded', function (): void {
 add_action('init', function(): void {
     new Postman_Admin();
 });
+
+// Register WP-CLI commands if available
+if (defined('WP_CLI') && WP_CLI) {
+    WP_CLI::add_command('mksddn-postman', [new Postman_CLI(), 'export']);
+}
