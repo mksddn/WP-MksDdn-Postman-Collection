@@ -20,8 +20,8 @@ class Postman_Admin {
     public function __construct() {
         $this->options_handler = new Postman_Options();
 
-        add_action('admin_menu', $this->add_admin_menu(...));
-        add_action('admin_post_generate_postman_collection', $this->handle_generation(...));
+        add_action('admin_menu', [ $this, 'add_admin_menu' ]);
+        add_action('admin_post_generate_postman_collection', [ $this, 'handle_generation' ]);
     }
 
 
