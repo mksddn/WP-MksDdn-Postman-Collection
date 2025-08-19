@@ -86,11 +86,20 @@ class Postman_Generator {
         $individual_routes = $this->routes_handler->get_individual_page_routes($selected_page_slugs);
         $items = array_merge($items, $individual_routes);
 
-        return [
+        $collection = [
             'info' => $this->get_collection_info(),
             'item' => $items,
             'variable' => $this->routes_handler->get_variables($custom_post_types),
         ];
+
+        /**
+         * Filter the final Postman collection array before it is exported.
+         *
+         * @param array $collection         The full collection array.
+         * @param array $custom_post_types  The discovered custom post types.
+         * @param array $selected_page_slugs Selected page slugs.
+         */
+        return (array) apply_filters('mksddn_postman_collection', $collection, $custom_post_types, $selected_page_slugs);
     }
 
 
@@ -105,8 +114,16 @@ class Postman_Generator {
     private function download_collection(array $collection): void {
         $json = wp_json_encode($collection, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
+        /**
+         * Filter the exported filename for the collection download.
+         *
+         * @param string $filename   Default filename.
+         * @param array  $collection The collection array.
+         */
+        $filename = (string) apply_filters('mksddn_postman_filename', 'postman_collection.json', $collection);
+
         header('Content-Type: application/json');
-        header('Content-Disposition: attachment; filename="postman_collection.json"');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Content-Length: ' . strlen($json));
 
         // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Output is a JSON string for download.
