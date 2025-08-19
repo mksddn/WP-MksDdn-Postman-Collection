@@ -1,0 +1,101 @@
+<!--
+@file: docs/Project.md
+@description: Детальное описание плагина MksDdn Postman Collection: цели, архитектура, стандарты, процессы.
+@dependencies: mksddn-postman-collection/postman-collection.php, includes/class-postman-*.php
+@created: 2025-08-19
+-->
+
+### MksDdn Postman Collection — проектная документация
+
+**Цель**: предоставить удобный способ генерировать Postman Collection для REST API WordPress-сайта из админки и использовать плагин как независимый пакет, распространяемый через WordPress.org SVN и обновляемый по стандартному механизму.
+
+Ссылка на стандарты WordPress плагинов: [Plugin Handbook](https://developer.wordpress.org/plugins/).
+
+### Область применения
+- Генерация Postman Collection v2.1.0 по публичным REST-маршрутам WordPress, в том числе:
+  - базовые сущности WP (`pages`, `posts`, `categories`, `tags`, `taxonomies`, `comments`, `users`, `settings`)
+  - пользовательские типы записей (CPT), включая специальные маршруты для `forms`
+  - страницы опций (эндпоинты вида `/wp-json/custom/v1/options/...`)
+  - индивидуально выбранные страницы по слагам
+- Скачивание JSON-файла коллекции из админки.
+
+### Архитектура и компоненты
+- Пакет плагина: `mksddn-postman-collection/`
+  - `postman-collection.php` — точка входа плагина (инициализация, константы, автозагрузка, регистрация хуков)
+  - `includes/class-postman-admin.php` — админ-интерфейс: страница, форма выбора, обработчик `admin_post_*`
+  - `includes/class-postman-generator.php` — сборка структуры коллекции и выдача JSON на скачивание
+  - `includes/class-postman-options.php` — извлечение и кэширование страниц опций через REST server и роуты
+  - `includes/class-postman-routes.php` — генерация маршрутов для базовых сущностей, CPT, форм и индивидуальных страниц
+
+Диаграмма на высоком уровне:
+
+```mermaid
+flowchart TD
+  A[Admin UI<br/>Postman_Admin] -->|submit| B[Handler<br/>admin_post_*]
+  B --> C[Postman_Generator]
+  C --> D[Postman_Routes]
+  C --> E[Postman_Options]
+  D --> F[Collection JSON]
+  E --> D
+```
+
+### Точки расширения и интеграции
+- Хуки WordPress:
+  - `admin_menu` — добавление страницы админки
+  - `admin_post_generate_postman_collection` — обработка генерации
+  - `init` — инициализация плагина
+- В планах: добавить собственные фильтры для модификации элементов коллекции и переменных (см. дорожную карту).
+
+### Требования и совместимость
+- Требования (предлагаемые, уточнить в QA):
+  - WordPress ≥ 6.2
+  - PHP ≥ 7.4 (желательно 8.0+)
+- Безопасность:
+  - Защита прямого доступа через `ABSPATH`
+  - Проверка прав `manage_options` и `check_admin_referer` для генерации
+  - Экранирование вывода в админке (`esc_html`, `esc_attr`, `esc_url`)
+  - Санитизация входящих данных из `$_POST`
+- Производительность:
+  - Ленивая загрузка страниц опций (`Postman_Options::load_options_pages_if_needed`)
+  - Автозагрузчик классов, отсутствие тяжёлых зависимостей
+
+### Соответствие WordPress Plugin Check (PCP)
+- К заголовкам плагина добавить: `Requires at least`, `Tested up to`, `Requires PHP`, `Text Domain`, `Domain Path`, `License`, `License URI`, `Update URI` (при необходимости), `Author URI`.
+- I18n: добавить `load_plugin_textdomain`, обернуть строки в переводимые функции `__()/_e()`; подготовить `.pot`.
+- Экранирование всего HTML/атрибутов в админке.
+- PHPCS (WordPress Coding Standards), PHPCompatibility.
+- Readme.txt в формате WordPress.org с тегами, кратким/полным описанием, установкой, Changelog.
+
+### Стандарты и стиль
+- Код-стайл: WordPress Coding Standards (WPCS) через PHPCS.
+- Статика: PHPStan/Psalm (уровень 5-6) — опционально.
+- Семантическое версионирование: `MAJOR.MINOR.PATCH`.
+
+### Структура репозиториев и релизы
+- GitHub: весь репозиторий (включая `docs/`).
+- WordPress.org SVN: пушим только содержимое директории `mksddn-postman-collection/`.
+- Релизный процесс:
+  1) Обновить версию в `postman-collection.php` и `readme.txt`.
+  2) Прогнать PCP, PHPCS, тесты.
+  3) Тег в Git, экспорт в SVN `trunk/`, подготовка `tags/x.y.z`.
+  4) Публикация, проверка автообновлений.
+
+### План работ (high-level)
+1) Формализация метаданных плагина для PCP
+2) Полная i18n и загрузка text-domain
+3) Жёсткое экранирование/санитизация в админ-форме
+4) Readme.txt (WP.org) и скриншоты/иконки
+5) PHPCS + PHPCompatibility конфигурация
+6) Автотест PCP в CI
+7) Пользовательские фильтры для расширяемости
+
+### Консистентность и поддерживаемость
+- Единая архитектура классов с чёткими зонами ответственности.
+- Документация обновляется при каждом значимом изменении (см. `docs/changelog.md`).
+- Минимизировать глобальные состояния; использовать константы только для путей/версий.
+- Никаких «магических» строк без констант/помощников.
+
+### Известные пробелы (для бэклога)
+- Не хватает: i18n, заголовков и readme для каталога плагинов, CI, PHPCS-конфига.
+
+
