@@ -7,7 +7,7 @@ Version: 1.0.0
 Author: mksddn
 Author URI: https://github.com/mksddn
 Requires at least: 6.2
-Tested up to: 6.6
+Tested up to: 6.8
 Requires PHP: 8.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -38,13 +38,7 @@ spl_autoload_register(function ($class): void {
 });
 
 // Load plugin text domain for translations
-add_action('plugins_loaded', function (): void {
-    load_plugin_textdomain(
-        POSTMAN_PLUGIN_TEXT_DOMAIN,
-        false,
-        dirname(plugin_basename(__FILE__)) . '/languages'
-    );
-});
+// Note: load_plugin_textdomain() not required for plugins hosted on WordPress.org since 4.6.
 
 // Initialize plugin
 add_action('init', function(): void {

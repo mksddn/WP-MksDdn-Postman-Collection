@@ -27,8 +27,8 @@ class Postman_Admin {
 
     public function add_admin_menu(): void {
         add_menu_page(
-            esc_html__('Postman Collection', POSTMAN_PLUGIN_TEXT_DOMAIN),
-            esc_html__('Postman Collection', POSTMAN_PLUGIN_TEXT_DOMAIN),
+            esc_html__('Postman Collection', 'mksddn-postman-collection'),
+            esc_html__('Postman Collection', 'mksddn-postman-collection'),
             $this->get_required_capability(),
             self::MENU_SLUG,
             $this->admin_page(...),
@@ -118,20 +118,23 @@ class Postman_Admin {
 
 
     private function get_selected_page_slugs(): array {
-        $slugs = (array) ($_POST['custom_page_slugs'] ?? []);
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Used only to pre-fill admin form; nonce is verified on action submit and values are sanitized below.
+        $slugs = isset($_POST['custom_page_slugs']) ? (array) wp_unslash($_POST['custom_page_slugs']) : [];
         return array_values(array_filter(array_map('sanitize_title', $slugs)));
     }
 
 
     private function get_selected_post_slugs(): array {
-        $slugs = (array) ($_POST['custom_post_slugs'] ?? []);
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Used only to pre-fill admin form; nonce is verified on action submit and values are sanitized below.
+        $slugs = isset($_POST['custom_post_slugs']) ? (array) wp_unslash($_POST['custom_post_slugs']) : [];
         return array_values(array_filter(array_map('sanitize_title', $slugs)));
     }
 
 
     private function get_selected_custom_slugs(): array {
         $result = [];
-        $incoming = (array) ($_POST['custom_post_type_slugs'] ?? []);
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Used only to pre-fill admin form; nonce is verified on action submit and values are sanitized below.
+        $incoming = isset($_POST['custom_post_type_slugs']) ? (array) wp_unslash($_POST['custom_post_type_slugs']) : [];
         foreach ($incoming as $type => $slugs) {
             $type_key = sanitize_key((string) $type);
             $result[$type_key] = array_values(array_filter(array_map('sanitize_title', (array) $slugs)));
@@ -141,14 +144,15 @@ class Postman_Admin {
 
 
     private function get_selected_options_pages(): array {
-        $pages = (array) ($_POST['options_pages'] ?? []);
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Used only to pre-fill admin form; nonce is verified on action submit and values are sanitized below.
+        $pages = isset($_POST['options_pages']) ? (array) wp_unslash($_POST['options_pages']) : [];
         return array_values(array_filter(array_map('sanitize_key', $pages)));
     }
 
 
     private function render_admin_page(array $data): void {
         echo '<div class="wrap">';
-        echo '<h1>' . esc_html__('Generate Postman Collection', POSTMAN_PLUGIN_TEXT_DOMAIN) . '</h1>';
+        echo '<h1>' . esc_html__('Generate Postman Collection', 'mksddn-postman-collection') . '</h1>';
 
         $this->render_form($data);
         $this->render_javascript();
@@ -162,19 +166,19 @@ class Postman_Admin {
         wp_nonce_field(self::NONCE_ACTION);
         echo '<input type="hidden" name="action" value="generate_postman_collection">';
 
-        echo '<h3>' . esc_html__('Add individual requests for pages:', POSTMAN_PLUGIN_TEXT_DOMAIN) . '</h3>';
+        echo '<h3>' . esc_html__('Add individual requests for pages:', 'mksddn-postman-collection') . '</h3>';
         $this->render_selection_buttons();
         $this->render_pages_list($data['pages'], $data['selected_page_slugs']);
 
-        echo '<br><button class="button button-primary" name="generate_postman">' . esc_html__('Generate and download collection', POSTMAN_PLUGIN_TEXT_DOMAIN) . '</button>';
+        echo '<br><button class="button button-primary" name="generate_postman">' . esc_html__('Generate and download collection', 'mksddn-postman-collection') . '</button>';
         echo '</form>';
     }
 
 
     private function render_selection_buttons(): void {
         echo '<div style="margin-bottom: 10px;">';
-        echo '<button type="button" class="button" onclick="selectAll(\'custom_page_slugs\')">' . esc_html__('Select All', POSTMAN_PLUGIN_TEXT_DOMAIN) . '</button> ';
-        echo '<button type="button" class="button" onclick="deselectAll(\'custom_page_slugs\')">' . esc_html__('Deselect All', POSTMAN_PLUGIN_TEXT_DOMAIN) . '</button>';
+        echo '<button type="button" class="button" onclick="selectAll(\'custom_page_slugs\')">' . esc_html__('Select All', 'mksddn-postman-collection') . '</button> ';
+        echo '<button type="button" class="button" onclick="deselectAll(\'custom_page_slugs\')">' . esc_html__('Deselect All', 'mksddn-postman-collection') . '</button>';
         echo '</div>';
     }
 
@@ -183,8 +187,9 @@ class Postman_Admin {
         echo '<ul style="max-height:200px;overflow:auto;border:1px solid #eee;padding:10px;margin-bottom:20px;">';
         foreach ($pages as $page) {
             $slug = $page->post_name;
-            $checked = in_array($slug, $selected_slugs, true) ? 'checked' : '';
-            echo '<li><label><input type="checkbox" name="custom_page_slugs[]" value="' . esc_attr($slug) . '" ' . $checked . '> ' . esc_html($page->post_title) . ' <span style="color:#888">(' . esc_html($slug) . ')</span></label></li>';
+            echo '<li><label><input type="checkbox" name="custom_page_slugs[]" value="' . esc_attr($slug) . '"';
+            checked(in_array($slug, $selected_slugs, true), true);
+            echo '> ' . esc_html($page->post_title) . ' <span style="color:#888">(' . esc_html($slug) . ')</span></label></li>';
         }
 
         echo '</ul>';
@@ -214,7 +219,7 @@ class Postman_Admin {
 
     public function handle_generation(): void {
         if (!current_user_can($this->get_required_capability()) || !check_admin_referer(self::NONCE_ACTION)) {
-            wp_die(esc_html__('Insufficient permissions or invalid nonce.', POSTMAN_PLUGIN_TEXT_DOMAIN));
+            wp_die(esc_html__('Insufficient permissions or invalid nonce.', 'mksddn-postman-collection'));
         }
         $selected_data = [
             'page_slugs' => $this->get_selected_page_slugs(),

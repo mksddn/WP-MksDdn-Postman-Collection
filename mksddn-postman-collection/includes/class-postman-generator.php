@@ -109,6 +109,7 @@ class Postman_Generator {
         header('Content-Disposition: attachment; filename="postman_collection.json"');
         header('Content-Length: ' . strlen($json));
 
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Output is a JSON string for download.
         echo $json;
         exit;
     }
