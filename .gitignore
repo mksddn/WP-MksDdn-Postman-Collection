@@ -1,3 +1,29 @@
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Dependencies and builds
+vendor/
+node_modules/
+dist/
+build/
+coverage/
+exports/
+
+# Archives, logs, caches
+*.zip
+*.log
+*.cache
+*.bak
+
+# Composer lock (optional, if vendor is not committed)
+composer.lock
+
+# Misc
+postman_collection*.json
 # WordPress плагин - MksDdn Forms Handler
 # Исключения для GitHub репозитория
 

@@ -1,0 +1,42 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: MksDdn Postman Collection 1.0.0\n"
+"Report-Msgid-Bugs-To: https://github.com/mksddn/WP-MksDdn-Postman-Collection/issues\n"
+"POT-Creation-Date: 2025-08-19 00:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Domain: mksddn-postman-collection\n"
+
+#: mksddn-postman-collection/includes/class-postman-admin.php:24
+msgid "Postman Collection"
+msgstr ""
+
+#: mksddn-postman-collection/includes/class-postman-admin.php:36
+msgid "Generate Postman Collection"
+msgstr ""
+
+#: mksddn-postman-collection/includes/class-postman-admin.php:48
+msgid "Add individual requests for pages:"
+msgstr ""
+
+#: mksddn-postman-collection/includes/class-postman-admin.php:52
+msgid "Generate and download collection"
+msgstr ""
+
+#: mksddn-postman-collection/includes/class-postman-admin.php:60
+msgid "Select All"
+msgstr ""
+
+#: mksddn-postman-collection/includes/class-postman-admin.php:61
+msgid "Deselect All"
+msgstr ""
+
+#: mksddn-postman-collection/includes/class-postman-admin.php:103
+msgid "Insufficient permissions or invalid nonce."
+msgstr ""
+
