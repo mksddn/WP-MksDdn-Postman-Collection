@@ -5,16 +5,26 @@
 @created: 2025-08-19
 -->
 
-### Открытые вопросы
-1. Минимальные версии окружения: подтвердите `WordPress >= 6.2` и `PHP >= 7.4/8.0`.
-2. Слаг и `text-domain`: использовать `mksddn-postman-collection`? Нужно ли иное имя для каталога WordPress.org?
-3. Лицензия: GPLv2 или GPLv3? Указать `License` и `License URI` в заголовке.
-4. `Author URI` и ссылка на репозиторий: указывать `https://github.com/mksddn/WP-MksDdn-Postman-Collection`?
-5. Нужна ли мультисайт-совместимость на старте?
-6. I18n: сразу добавляем `.pot` и готовим локализации (ru_RU/en_US)?
-7. Нужны ли WP-CLI команды для генерации коллекции без веб-интерфейса?
-8. Дополнительные `capabilities` для ограничения доступа к админ-странице?
-9. Миграция/совместимость с существующим MU-плагином: перенос настроек/поведение при одновременной установке?
-10. Что исключать в `.gitignore` для GitHub (build-артефакты, локальные конфиги, экспорты коллекций)?
+### Вопросы и ответы
+1. Минимальные версии окружения
+   - Ответ: `Requires at least: 6.2`, `Tested up to: 6.6`, `Requires PHP: 7.4` (рекомендуем 8.0+).
+2. Слаг и text-domain
+   - Ответ: использовать `mksddn-postman-collection` для каталога и `Text Domain: mksddn-postman-collection` (совпадает с именем директории плагина).
+3. Лицензия
+   - Ответ: `License: GPL-2.0-or-later`, `License URI: https://www.gnu.org/licenses/gpl-2.0.html`.
+4. Автор и ссылки
+   - Ответ: `Author: mksddn`, `Author URI: https://github.com/mksddn`, `Plugin URI: https://github.com/mksddn/WP-MksDdn-Postman-Collection`.
+5. Мультисайт-совместимость
+   - Ответ: поддерживается по умолчанию (админ-страница на уровне сайта, генерация на сайт-базе; специальных network-фич нет).
+6. Интернационализация (i18n)
+   - Ответ: да. Добавить `load_plugin_textdomain()`, папку `languages/`, `.pot` файл. Языки: базовый `en_US`, локализация `ru_RU` планируется.
+7. WP-CLI команды
+   - Ответ: да, добавить команду `wp mksddn-postman export --file=postman_collection.json` (по умолчанию вывод в stdout; опция `--include=pages,posts,cpt,options`).
+8. Capabilities
+   - Ответ: на MVP оставить `manage_options`. В дальнейшем ввести кастомную capability `mksddn_postman_manage` и фильтр для переопределения.
+9. Совместимость с MU-плагином
+   - Ответ: миграция не требуется (плагин не хранит постоянные данные). Рекомендуется удалить/отключить MU-версию, чтобы избежать дублирования меню/действий.
+10. .gitignore для GitHub
+   - Ответ: добавить исключения: `.DS_Store`, `.idea/`, `.vscode/`, `node_modules/`, `vendor/`, `dist/`, `build/`, `coverage/`, `*.zip`, `*.log`, `*.cache`, `*.bak`, `composer.lock` (если не публикуем vendor), `exports/`, `postman_collection*.json`. Для SVN будет публиковаться только `mksddn-postman-collection/`.
 
 
