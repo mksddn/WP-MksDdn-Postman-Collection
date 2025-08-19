@@ -216,15 +216,6 @@ class Postman_Admin {
         if (!current_user_can($this->get_required_capability()) || !check_admin_referer(self::NONCE_ACTION)) {
             wp_die(esc_html__('Insufficient permissions or invalid nonce.', POSTMAN_PLUGIN_TEXT_DOMAIN));
         }
-    
-    private function get_required_capability(): string {
-        /**
-         * Filter required capability for accessing plugin admin page and actions.
-         *
-         * @param string $capability Default capability.
-         */
-        return (string) apply_filters('mksddn_postman_capability', self::CAPABILITY);
-    }
         $selected_data = [
             'page_slugs' => $this->get_selected_page_slugs(),
             'post_slugs' => $this->get_selected_post_slugs(),
@@ -239,6 +230,15 @@ class Postman_Admin {
             $selected_data['custom_slugs'],
             $selected_data['options_pages']
         );
+    }
+
+    private function get_required_capability(): string {
+        /**
+         * Filter required capability for accessing plugin admin page and actions.
+         *
+         * @param string $capability Default capability.
+         */
+        return (string) apply_filters('mksddn_postman_capability', self::CAPABILITY);
     }
 
 
