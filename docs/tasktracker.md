@@ -122,6 +122,15 @@
   - [x] `mksddn_postman_filename`
 - **Зависимости**: Нет
 
+## Задача: Условная смена namespace для форм
+- **Статус**: Завершена
+- **Описание**: Если активен `mksddn-forms-handler`, использовать `mksddn-forms-handler/v1/forms` вместо `wp/v2/forms` для list и submit.
+- **Шаги выполнения**:
+  - [x] Добавить проверку `is_plugin_active('mksddn-forms-handler/mksddn-forms-handler.php')`
+  - [x] Обновить пути list и submit в `Postman_Routes::get_forms_routes`
+  - [x] Обновить `docs/changelog.md`
+- **Зависимости**: Нет
+
 ## Задача: Локальный прогон PCP
 - **Статус**: Не начата
 - **Описание**: Прогнать WordPress Plugin Check локально и устранить замечания.

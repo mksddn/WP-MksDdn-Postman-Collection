@@ -27,6 +27,9 @@
   - `includes/class-postman-options.php` — извлечение и кэширование страниц опций через REST server и роуты
   - `includes/class-postman-routes.php` — генерация маршрутов для базовых сущностей, CPT, форм и индивидуальных страниц
 
+Примечание по интеграции с формами:
+- Если установлен и активен плагин `mksddn-forms-handler`, коллекция для форм использует namespace `mksddn-forms-handler/v1` и пути `wp-json/mksddn-forms-handler/v1/forms` для list и submit; иначе — стандартные `wp/v2/forms`.
+
 Диаграмма на высоком уровне:
 
 ```mermaid

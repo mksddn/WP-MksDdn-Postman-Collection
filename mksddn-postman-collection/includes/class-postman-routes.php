@@ -281,17 +281,23 @@ class Postman_Routes {
             // Get rest_base for post type (if exists)
             $rest_base = empty($post_type_obj->rest_base) ? $post_type_name : $post_type_obj->rest_base;
 
-            // Special handling for Forms
-            if ($post_type_name === 'forms') {
+            // Special handling for Forms (handler CPT only)
+            $is_forms_post_type = ($post_type_name === 'mksddn_fh_forms');
+            if ($is_forms_post_type) {
+                // Force human-friendly folder name regardless of CPT labels
+                $type_label = 'Forms';
                 $folder_items = $this->get_forms_routes($rest_base, $type_label);
             } else {
                 $folder_items = $this->get_standard_custom_post_type_routes($post_type_name, $rest_base, $singular_label);
             }
 
-            $custom_routes[] = [
-                'name' => $type_label,
-                'item' => $folder_items,
-            ];
+            // Skip adding folder if there are no items (e.g., forms when handler plugin is inactive)
+            if ($folder_items !== []) {
+                $custom_routes[] = [
+                    'name' => $type_label,
+                    'item' => $folder_items,
+                ];
+            }
         }
 
         return $custom_routes;
@@ -301,6 +307,17 @@ class Postman_Routes {
     private function get_forms_routes(string $rest_base, string $type_label): array {
         $folder_items = [];
 
+        // Detect if MksDdn Forms Handler is active; if not, return no routes for forms
+        $use_handler_namespace = false;
+        if (!function_exists('is_plugin_active')) {
+            require_once ABSPATH . 'wp-admin/includes/plugin.php';
+        }
+        if (function_exists('is_plugin_active') && is_plugin_active('mksddn-forms-handler/mksddn-forms-handler.php')) {
+            $use_handler_namespace = true;
+        } else {
+            return [];
+        }
+
         // List for Forms
         $folder_items[] = [
             'name'    => 'List of ' . $type_label,
@@ -308,15 +325,10 @@ class Postman_Routes {
                 'method'      => 'GET',
                 'header'      => [],
                 'url'         => [
-                    'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=id,slug,title', $rest_base),
+                    'raw'   => '{{baseUrl}}/wp-json/mksddn-forms-handler/v1/forms/',
                     'host'  => ['{{baseUrl}}'],
-                    'path'  => ['wp-json', 'wp', 'v2', $rest_base],
-                    'query' => [
-                        [
-                            'key'   => '_fields',
-                            'value' => 'id,slug,title',
-                        ],
-                    ],
+                    'path'  => ['wp-json', 'mksddn-forms-handler', 'v1', 'forms'],
+                    'query' => [],
                 ],
                 'description' => 'Get list of all ' . $type_label,
             ],
@@ -324,7 +336,7 @@ class Postman_Routes {
 
         // Add ALL Forms (not just selected ones)
         $forms = get_posts([
-            'post_type'      => 'forms',
+            'post_type'      => 'mksddn_fh_forms',
             'posts_per_page' => -1,
             'orderby'        => 'title',
             'order'          => 'ASC',
@@ -373,9 +385,9 @@ class Postman_Routes {
                                 'raw'  => wp_json_encode($body_fields, JSON_PRETTY_PRINT),
                             ],
                             'url'         => [
-                                'raw'  => sprintf('{{baseUrl}}/wp-json/wp/v2/forms/%s/submit', $slug),
+                                'raw'  => sprintf('{{baseUrl}}/wp-json/mksddn-forms-handler/v1/forms/%s/submit', $slug),
                                 'host' => ['{{baseUrl}}'],
-                                'path' => ['wp-json', 'wp', 'v2', 'forms', $slug, 'submit'],
+                                'path' => ['wp-json', 'mksddn-forms-handler', 'v1', 'forms', $slug, 'submit'],
                             ],
                             'description' => sprintf("Submit form data for '%s'", $form_title),
                         ],
