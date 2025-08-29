@@ -29,6 +29,14 @@
 
 Примечание по интеграции с формами:
 - Если установлен и активен плагин `mksddn-forms-handler`, коллекция для форм использует namespace `mksddn-forms-handler/v1` и пути `wp-json/mksddn-forms-handler/v1/forms` для list и submit; иначе — стандартные `wp/v2/forms`.
+ - Для каждой формы добавляются два роута:
+   - GET `wp-json/mksddn-forms-handler/v1/forms/{slug}` — получение информации о форме
+   - POST `wp-json/mksddn-forms-handler/v1/forms/{slug}/submit` — отправка данных формы (тело запроса заполняется автогенерируемыми примерами значений)
+
+Примеры генерации тестовых данных для полей форм:
+- Поддерживаются типы: `text`, `email`, `password`, `tel`, `url`, `number` (учёт `min`/`max`/`step`), `date`, `time`, `datetime-local`, `textarea`, `checkbox`, `radio`, `select` (включая `multiple`), `file` (включая `multiple`).
+- Для `select`/`radio` поддерживаются варианты options как массив строк или массив объектов `{value,label}`; выбирается первое значение (или первые 1–2 при `multiple`).
+- Для `file` генерируются имена файлов-заглушек (`sample.pdf`), при `multiple` — массив значений.
 
 Диаграмма на высоком уровне:
 

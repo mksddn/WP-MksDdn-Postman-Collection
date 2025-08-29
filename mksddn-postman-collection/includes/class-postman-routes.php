@@ -353,23 +353,30 @@ class Postman_Routes {
             $body_fields = [];
             if (is_array($fields)) {
                 foreach ($fields as $field) {
-                    $name = $field['name'];
-                    $type = $field['type'] ?? 'text';
-                    // Example values by type
-                    $body_fields[$name] = match ($type) {
-                        'email' => 'test@example.com',
-                        'tel' => '+1234567890',
-                        'textarea' => 'Sample message text.',
-                        'boolean' => '1',
-                        'number' => '42',
-                        default => 'Sample text',
-                    };
+                    if (!is_array($field) || empty($field['name'])) {
+                        continue;
+                    }
+                    $name = (string) $field['name'];
+                    $body_fields[$name] = $this->generate_sample_value_for_field($field);
                 }
             }
 
             $folder_items[] = [
                 'name' => $form_title,
                 'item' => [
+                    [
+                        'name'    => 'Get Form Info - ' . $form_title,
+                        'request' => [
+                            'method'      => 'GET',
+                            'header'      => [],
+                            'url'         => [
+                                'raw'  => sprintf('{{baseUrl}}/wp-json/mksddn-forms-handler/v1/forms/%s', $slug),
+                                'host' => ['{{baseUrl}}'],
+                                'path' => ['wp-json', 'mksddn-forms-handler', 'v1', 'forms', $slug],
+                            ],
+                            'description' => sprintf("Get form info for '%s'", $form_title),
+                        ],
+                    ],
                     [
                         'name'    => 'Submit Form - ' . $form_title,
                         'request' => [
@@ -399,6 +406,103 @@ class Postman_Routes {
         return $folder_items;
     }
 
+
+    /**
+     * Generate sample value for a form field based on its config.
+     *
+     * @param array $field
+     * @return mixed
+     */
+    private function generate_sample_value_for_field(array $field)
+    {
+        $type = isset($field['type']) ? (string) $field['type'] : 'text';
+        $multiple = !empty($field['multiple']);
+
+        switch ($type) {
+            case 'text':
+                return 'Sample Text';
+            case 'email':
+                return 'test@example.com';
+            case 'password':
+                return 'P@ssw0rd123';
+            case 'tel':
+                return '+1234567890';
+            case 'url':
+                return 'https://example.com';
+            case 'number':
+                $min = isset($field['min']) && is_numeric($field['min']) ? (float) $field['min'] : null;
+                $max = isset($field['max']) && is_numeric($field['max']) ? (float) $field['max'] : null;
+                $step = isset($field['step']) && is_numeric($field['step']) ? (float) $field['step'] : 1.0;
+                $value = 42.0;
+                if ($min !== null && $max !== null) {
+                    $value = $min;
+                } elseif ($min !== null) {
+                    $value = $min;
+                } elseif ($max !== null) {
+                    $value = $max;
+                }
+                // Align to step if possible
+                if ($step > 0) {
+                    $value = floor($value / $step) * $step;
+                }
+                // Prefer int when step is integer
+                return fmod($step, 1.0) === 0.0 ? (int) $value : $value;
+            case 'date':
+                return gmdate('Y-m-d');
+            case 'time':
+                return gmdate('H:i');
+            case 'datetime-local':
+                return gmdate('Y-m-d\TH:i');
+            case 'textarea':
+                return 'Sample message text.';
+            case 'checkbox':
+                return '1';
+            case 'radio':
+                $options = isset($field['options']) ? $field['options'] : [];
+                $values = $this->extract_option_values($options);
+                return $values[0] ?? 'option';
+            case 'select':
+                $options = isset($field['options']) ? $field['options'] : [];
+                $values = $this->extract_option_values($options);
+                if ($multiple) {
+                    $sliceCount = max(1, min(2, count($values)));
+                    return array_slice($values, 0, $sliceCount);
+                }
+                return $values[0] ?? 'option';
+            case 'file':
+                if ($multiple) {
+                    return ['sample.pdf'];
+                }
+                return 'sample.pdf';
+            default:
+                return 'Sample text';
+        }
+    }
+
+    /**
+     * Extract option values from options array which can be strings or arrays with 'value'/'label'.
+     *
+     * @param mixed $options
+     * @return array
+     */
+    private function extract_option_values($options): array
+    {
+        $values = [];
+        if (is_array($options)) {
+            foreach ($options as $option) {
+                if (is_array($option)) {
+                    if (isset($option['value'])) {
+                        $values[] = (string) $option['value'];
+                    } elseif (isset($option['label'])) {
+                        $values[] = (string) $option['label'];
+                    }
+                } else {
+                    $values[] = (string) $option;
+                }
+            }
+        }
+        return $values;
+    }
 
     private function get_standard_custom_post_type_routes(string $post_type_name, $rest_base, string $singular_label): array
     {
