@@ -361,6 +361,14 @@ class Postman_Routes {
                 }
             }
 
+            // Decide headers for submit request based on presence of file fields
+            $submit_headers = $this->has_file_field($fields)
+                ? []
+                : [[
+                    'key'   => 'Content-Type',
+                    'value' => 'application/json',
+                ]];
+
             $folder_items[] = [
                 'name' => $form_title,
                 'item' => [
@@ -381,7 +389,7 @@ class Postman_Routes {
                         'name'    => 'Submit Form - ' . $form_title,
                         'request' => [
                             'method'      => 'POST',
-                            'header'      => [],
+                            'header'      => $submit_headers,
                             'body'        => $this->build_form_submit_body($body_fields, $fields),
                             'url'         => [
                                 'raw'  => sprintf('{{baseUrl}}/wp-json/mksddn-forms-handler/v1/forms/%s/submit', $slug),
@@ -530,6 +538,11 @@ class Postman_Routes {
             return [
                 'mode' => 'raw',
                 'raw'  => wp_json_encode($body_fields, JSON_PRETTY_PRINT),
+                'options' => [
+                    'raw' => [
+                        'language' => 'json',
+                    ],
+                ],
             ];
         }
 
@@ -577,6 +590,25 @@ class Postman_Routes {
             'mode'     => 'formdata',
             'formdata' => $formdata,
         ];
+    }
+
+
+    /**
+     * Check if fields contain at least one file field.
+     *
+     * @param mixed $fields
+     */
+    private function has_file_field($fields): bool
+    {
+        if (!is_array($fields)) {
+            return false;
+        }
+        foreach ($fields as $field) {
+            if (is_array($field) && isset($field['type']) && (string) $field['type'] === 'file') {
+                return true;
+            }
+        }
+        return false;
     }
 
     private function get_standard_custom_post_type_routes(string $post_type_name, $rest_base, string $singular_label): array
