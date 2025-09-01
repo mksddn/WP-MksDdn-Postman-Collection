@@ -381,16 +381,8 @@ class Postman_Routes {
                         'name'    => 'Submit Form - ' . $form_title,
                         'request' => [
                             'method'      => 'POST',
-                            'header'      => [
-                                [
-                                    'key'   => 'Content-Type',
-                                    'value' => 'application/json',
-                                ],
-                            ],
-                            'body'        => [
-                                'mode' => 'raw',
-                                'raw'  => wp_json_encode($body_fields, JSON_PRETTY_PRINT),
-                            ],
+                            'header'      => [],
+                            'body'        => $this->build_form_submit_body($body_fields, $fields),
                             'url'         => [
                                 'raw'  => sprintf('{{baseUrl}}/wp-json/mksddn-forms-handler/v1/forms/%s/submit', $slug),
                                 'host' => ['{{baseUrl}}'],
@@ -502,6 +494,89 @@ class Postman_Routes {
             }
         }
         return $values;
+    }
+
+
+    /**
+     * Build Postman request body for form submit. If there is at least one field of type 'file',
+     * the body will be multipart form-data, otherwise JSON raw.
+     *
+     * @param array $body_fields Key-value pairs generated for the form fields.
+     * @param mixed $fields      Original fields config (decoded JSON) to detect types and multiplicity.
+     * @return array             Postman request body structure.
+     */
+    private function build_form_submit_body(array $body_fields, $fields): array
+    {
+        $has_file = false;
+        $field_meta = [];
+        if (is_array($fields)) {
+            foreach ($fields as $field) {
+                if (is_array($field) && !empty($field['name'])) {
+                    $name = (string) $field['name'];
+                    $type = isset($field['type']) ? (string) $field['type'] : 'text';
+                    $multiple = !empty($field['multiple']);
+                    $field_meta[$name] = [
+                        'type'     => $type,
+                        'multiple' => $multiple,
+                    ];
+                    if ($type === 'file') {
+                        $has_file = true;
+                    }
+                }
+            }
+        }
+
+        if (!$has_file) {
+            return [
+                'mode' => 'raw',
+                'raw'  => wp_json_encode($body_fields, JSON_PRETTY_PRINT),
+            ];
+        }
+
+        $formdata = [];
+        foreach ($body_fields as $key => $value) {
+            $type = isset($field_meta[$key]['type']) ? (string) $field_meta[$key]['type'] : 'text';
+            $multiple = !empty($field_meta[$key]['multiple']);
+
+            if ($type === 'file') {
+                if (is_array($value)) {
+                    foreach ($value as $file_src) {
+                        $formdata[] = [
+                            'key'  => $multiple ? $key . '[]' : (string) $key,
+                            'type' => 'file',
+                            'src'  => (string) $file_src,
+                        ];
+                    }
+                } else {
+                    $formdata[] = [
+                        'key'  => (string) $key,
+                        'type' => 'file',
+                        'src'  => (string) $value,
+                    ];
+                }
+            } else {
+                if (is_array($value)) {
+                    foreach ($value as $text_value) {
+                        $formdata[] = [
+                            'key'   => $multiple ? $key . '[]' : (string) $key,
+                            'type'  => 'text',
+                            'value' => (string) $text_value,
+                        ];
+                    }
+                } else {
+                    $formdata[] = [
+                        'key'   => (string) $key,
+                        'type'  => 'text',
+                        'value' => (string) $value,
+                    ];
+                }
+            }
+        }
+
+        return [
+            'mode'     => 'formdata',
+            'formdata' => $formdata,
+        ];
     }
 
     private function get_standard_custom_post_type_routes(string $post_type_name, $rest_base, string $singular_label): array
