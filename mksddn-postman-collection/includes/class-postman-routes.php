@@ -225,21 +225,7 @@ class Postman_Routes {
         }
 
         $options_items = [];
-
-        // Add List of Options Pages
-        $options_items[] = [
-            'name'    => 'List of Options Pages',
-            'request' => [
-                'method'      => 'GET',
-                'header'      => [],
-                'url'         => [
-                    'raw'  => '{{baseUrl}}/wp-json/custom/v1/options',
-                    'host' => ['{{baseUrl}}'],
-                    'path' => ['wp-json', 'custom', 'v1', 'options'],
-                ],
-                'description' => 'Get list of all available options pages',
-            ],
-        ];
+        $has_real_pages = false;
 
         // Add ALL Options Pages (not just selected ones)
         foreach ($options_pages as $page_slug) {
@@ -251,6 +237,7 @@ class Postman_Routes {
                 continue;
             }
 
+            $has_real_pages = true;
             $options_items[] = [
                 'name'    => $display_name,
                 'request' => [
@@ -264,6 +251,23 @@ class Postman_Routes {
                     'description' => 'Get options for ' . $display_name,
                 ],
             ];
+        }
+
+        // Only add List of Options Pages if there are real pages
+        if ($has_real_pages) {
+            array_unshift($options_items, [
+                'name'    => 'List of Options Pages',
+                'request' => [
+                    'method'      => 'GET',
+                    'header'      => [],
+                    'url'         => [
+                        'raw'  => '{{baseUrl}}/wp-json/custom/v1/options',
+                        'host' => ['{{baseUrl}}'],
+                        'path' => ['wp-json', 'custom', 'v1', 'options'],
+                    ],
+                    'description' => 'Get list of all available options pages',
+                ],
+            ]);
         }
 
         return $options_items;
