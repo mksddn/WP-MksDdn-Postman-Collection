@@ -105,7 +105,7 @@ class Postman_Generator {
 
     private function get_collection_info(): array {
         return [
-            'name' => get_bloginfo('name') . ' API',
+            'name' => get_bloginfo('name'),
             'schema' => self::COLLECTION_SCHEMA,
         ];
     }

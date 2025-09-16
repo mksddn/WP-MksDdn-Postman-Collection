@@ -826,7 +826,7 @@ class Postman_Routes {
         $variables = [
             [
                 'key'   => 'baseUrl',
-                'value' => 'http://localhost:8000',
+                'value' => home_url(),
             ],
             [
                 'key'   => 'PostID',
