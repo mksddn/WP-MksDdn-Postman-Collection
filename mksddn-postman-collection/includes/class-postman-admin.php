@@ -27,8 +27,8 @@ class Postman_Admin {
 
     public function add_admin_menu(): void {
         add_menu_page(
-            esc_html__('Postman Collection', 'mksddn-postman-collection'),
-            esc_html__('Postman Collection', 'mksddn-postman-collection'),
+            esc_html__('Postman Collection', 'mksddn-collection-for-postman'),
+            esc_html__('Postman Collection', 'mksddn-collection-for-postman'),
             $this->get_required_capability(),
             self::MENU_SLUG,
             $this->admin_page(...),
@@ -152,7 +152,7 @@ class Postman_Admin {
 
     private function render_admin_page(array $data): void {
         echo '<div class="wrap">';
-        echo '<h1>' . esc_html__('Generate Postman Collection', 'mksddn-postman-collection') . '</h1>';
+        echo '<h1>' . esc_html__('Generate Postman Collection', 'mksddn-collection-for-postman') . '</h1>';
 
         $this->render_form($data);
         $this->render_javascript();
@@ -166,19 +166,19 @@ class Postman_Admin {
         wp_nonce_field(self::NONCE_ACTION);
         echo '<input type="hidden" name="action" value="generate_postman_collection">';
 
-        echo '<h3>' . esc_html__('Add individual requests for pages:', 'mksddn-postman-collection') . '</h3>';
+        echo '<h3>' . esc_html__('Add individual requests for pages:', 'mksddn-collection-for-postman') . '</h3>';
         $this->render_selection_buttons();
         $this->render_pages_list($data['pages'], $data['selected_page_slugs']);
 
-        echo '<br><button class="button button-primary" name="generate_postman">' . esc_html__('Generate and download collection', 'mksddn-postman-collection') . '</button>';
+        echo '<br><button class="button button-primary" name="generate_postman">' . esc_html__('Generate and download collection', 'mksddn-collection-for-postman') . '</button>';
         echo '</form>';
     }
 
 
     private function render_selection_buttons(): void {
         echo '<div style="margin-bottom: 10px;">';
-        echo '<button type="button" class="button" onclick="selectAll(\'custom_page_slugs\')">' . esc_html__('Select All', 'mksddn-postman-collection') . '</button> ';
-        echo '<button type="button" class="button" onclick="deselectAll(\'custom_page_slugs\')">' . esc_html__('Deselect All', 'mksddn-postman-collection') . '</button>';
+        echo '<button type="button" class="button" onclick="selectAll(\'custom_page_slugs\')">' . esc_html__('Select All', 'mksddn-collection-for-postman') . '</button> ';
+        echo '<button type="button" class="button" onclick="deselectAll(\'custom_page_slugs\')">' . esc_html__('Deselect All', 'mksddn-collection-for-postman') . '</button>';
         echo '</div>';
     }
 
@@ -219,7 +219,7 @@ class Postman_Admin {
 
     public function handle_generation(): void {
         if (!current_user_can($this->get_required_capability()) || !check_admin_referer(self::NONCE_ACTION)) {
-            wp_die(esc_html__('Insufficient permissions or invalid nonce.', 'mksddn-postman-collection'));
+            wp_die(esc_html__('Insufficient permissions or invalid nonce.', 'mksddn-collection-for-postman'));
         }
         $selected_data = [
             'page_slugs' => $this->get_selected_page_slugs(),

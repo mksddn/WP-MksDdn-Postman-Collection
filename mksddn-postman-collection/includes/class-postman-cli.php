@@ -7,7 +7,7 @@
  * @created: 2025-08-19
  */
 /**
- * WP-CLI commands for MksDdn Postman Collection.
+ * WP-CLI commands for MksDdn Collection for Postman.
  */
 class Postman_CLI {
 
@@ -23,8 +23,8 @@ class Postman_CLI {
      * : Comma-separated page slugs to include as individual requests.
      *
      * ## EXAMPLES
-     *     wp mksddn-postman export --file=postman_collection.json
-     *     wp mksddn-postman export --pages=home,about
+     *     wp mksddn-collection-for-postman export --file=postman_collection.json
+     *     wp mksddn-collection-for-postman export --pages=home,about
      */
     public function export(array $args, array $assoc_args): void {
         $pages_param = isset($assoc_args['pages']) ? (string) $assoc_args['pages'] : '';

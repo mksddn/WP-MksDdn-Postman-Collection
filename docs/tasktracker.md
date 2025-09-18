@@ -1,6 +1,6 @@
 <!--
 @file: docs/tasktracker.md
-@description: Трекер задач проекта MksDdn Postman Collection
+@description: Трекер задач проекта MksDdn Collection for Postman
 @dependencies: docs/Project.md
 @created: 2025-08-19
 -->
@@ -96,7 +96,7 @@
 - **Описание**: Реализовать CLI-команду для экспорта коллекции.
 - **Шаги выполнения**:
   - [x] Добавить класс `Postman_CLI`
-  - [x] Зарегистрировать команду `wp mksddn-postman export`
+  - [x] Зарегистрировать команду `wp mksddn-collection-for-postman export`
   - [x] Обновить `readme.txt` с примерами
 - **Зависимости**: Нет
 
@@ -104,7 +104,7 @@
 - **Статус**: Не начата
 - **Описание**: Подготовить структуру для SVN (`trunk/`, `tags/`).
 - **Шаги выполнения**:
-  - [ ] Сформировать содержимое каталога `mksddn-postman-collection`
+  - [ ] Сформировать содержимое каталога `mksddn-collection-for-postman`
   - [ ] Проверить readme и заголовки
   - [ ] Тест обновления на тестовом сайте
 - **Зависимости**: Readme, PCP
@@ -233,3 +233,29 @@
   - [x] Протестировать генерацию коллекции с новым baseUrl
   - [x] Обновить документацию в tasktracker.md
 - **Зависимости**: Нет
+
+## Задача: Изменение названия плагина для соответствия требованиям WordPress.org
+- **Статус**: Завершена
+- **Описание**: Изменить название плагина с "MksDdn Postman Collection" на "MksDdn Collection for Postman" и slug с "mksddn-postman-collection" на "mksddn-collection-for-postman" для избежания нарушения торговых марок.
+- **Шаги выполнения**:
+  - [x] Обновить Plugin Name в postman-collection.php
+  - [x] Изменить Text Domain на mksddn-collection-for-postman
+  - [x] Обновить WP-CLI команду на mksddn-collection-for-postman
+  - [x] Обновить readme.txt с новым названием
+  - [x] Обновить все файлы includes/ с новым text domain
+  - [x] Переименовать файл языков на mksddn-collection-for-postman.pot
+  - [x] Обновить документацию проекта
+  - [x] Обновить версию плагина до 1.0.1
+- **Зависимости**: Требования WordPress.org по торговым маркам
+
+## Задача: Обновление версии плагина до 1.0.1
+- **Статус**: Завершена
+- **Описание**: Обновить версию плагина с 1.0.0 на 1.0.1 после изменения названия и slug.
+- **Шаги выполнения**:
+  - [x] Обновить версию в postman-collection.php (заголовок и константа)
+  - [x] Обновить Stable tag в readme.txt
+  - [x] Добавить запись в Changelog с описанием изменений
+  - [x] Обновить Upgrade Notice
+  - [x] Обновить версию в файле языков
+  - [x] Обновить документацию в tasktracker.md
+- **Зависимости**: Изменение названия плагина

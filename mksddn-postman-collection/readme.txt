@@ -1,17 +1,17 @@
-=== MksDdn Postman Collection ===
+=== MksDdn Collection for Postman ===
 Contributors: mksddn
 Tags: rest api, postman, collection, developer-tools
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 8.1
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 Generate a Postman Collection (v2.1.0) for the WordPress REST API from the admin UI.
 
 == Description ==
-MksDdn Postman Collection helps developers quickly generate a Postman Collection (v2.1.0) for WordPress REST API endpoints. The plugin automatically discovers and includes standard WordPress entities, custom post types, options pages, and individual pages. Generated collections include pre-configured requests with sample data and can be downloaded as JSON files for import into Postman.
+MksDdn Collection for Postman helps developers quickly generate a Postman Collection (v2.1.0) for WordPress REST API endpoints. The plugin automatically discovers and includes standard WordPress entities, custom post types, options pages, and individual pages. Generated collections include pre-configured requests with sample data and can be downloaded as JSON files for import into Postman.
 
 The plugin provides comprehensive API testing capabilities with automatic generation of test data for form submissions, support for file uploads via multipart/form-data, and seamless integration with Advanced Custom Fields (ACF). Special handling is included for the mksddn-forms-handler plugin when active.
 
@@ -27,7 +27,7 @@ Features:
 - WP-CLI integration for command-line usage
 
 == Installation ==
-1. Upload the `mksddn-postman-collection` folder to the `/wp-content/plugins/` directory.
+1. Upload the `mksddn-collection-for-postman` folder to the `/wp-content/plugins/` directory.
 2. Activate the plugin through the 'Plugins' menu in WordPress.
 3. In the admin sidebar, open “Postman Collection” to generate and download the collection.
 
@@ -42,13 +42,13 @@ No. It supports ACF fields if present for pages and posts, but it does not requi
 Yes. The plugin includes WP-CLI integration for command-line usage:
 
 Export to file:
-`wp mksddn-postman export --file=postman_collection.json`
+`wp mksddn-collection-for-postman export --file=postman_collection.json`
 
 Print to stdout:
-`wp mksddn-postman export --pages=home,about`
+`wp mksddn-collection-for-postman export --pages=home,about`
 
 Export with specific pages:
-`wp mksddn-postman export --file=my_collection.json --pages=home,about,contact`
+`wp mksddn-collection-for-postman export --file=my_collection.json --pages=home,about,contact`
 
 = Does it support ACF fields? =
 Yes. The plugin automatically includes ACF field support in requests for pages and posts. When generating requests, it adds `acf_format=standard` parameter and includes ACF fields in the `_fields` parameter.
@@ -66,10 +66,19 @@ Yes. The plugin provides WordPress filters for customization:
 1. Admin screen with page selection and download button.
 
 == Changelog ==
+= 1.0.1 =
+- Changed plugin name from "MksDdn Postman Collection" to "MksDdn Collection for Postman"
+- Updated plugin slug from "mksddn-postman-collection" to "mksddn-collection-for-postman"
+- Updated WP-CLI command from "mksddn-postman" to "mksddn-collection-for-postman"
+- Updated text domain and language files
+
 = 1.0.0 =
 Initial public release.
 
 == Upgrade Notice ==
+= 1.0.1 =
+Plugin name and slug updated for WordPress.org compliance. No migration steps are required.
+
 = 1.0.0 =
 Initial public release. No migration steps are required.
 
