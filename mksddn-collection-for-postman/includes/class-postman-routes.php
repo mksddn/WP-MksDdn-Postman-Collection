@@ -83,6 +83,16 @@ class Postman_Routes {
 
 
     /**
+     * Get _fields parameter value for search requests, including featured image.
+     *
+     * @return string
+     */
+    private function get_search_fields_param(): string {
+        return 'id,slug,title,excerpt,featured_media';
+    }
+
+
+    /**
      * Get default headers for GET requests, including Accept-Language.
      *
      * @return array
@@ -318,7 +328,7 @@ class Postman_Routes {
                         'method'      => 'GET',
                         'header'      => $this->get_default_headers(),
                         'url'         => [
-                            'raw'   => '{{baseUrl}}/wp-json/wp/v2/search?search=example&type=post&_fields=' . $this->get_fields_param(),
+                            'raw'   => '{{baseUrl}}/wp-json/wp/v2/search?search=example&type=post&_fields=' . $this->get_search_fields_param(),
                             'host'  => ['{{baseUrl}}'],
                             'path'  => ['wp-json', 'wp', 'v2', 'search'],
                             'query' => [
@@ -332,7 +342,7 @@ class Postman_Routes {
                                 ],
                                 [
                                     'key'   => '_fields',
-                                    'value' => $this->get_fields_param(),
+                                    'value' => $this->get_search_fields_param(),
                                 ],
                             ],
                         ],
@@ -345,7 +355,7 @@ class Postman_Routes {
                         'method'      => 'GET',
                         'header'      => $this->get_default_headers(),
                         'url'         => [
-                            'raw'   => '{{baseUrl}}/wp-json/wp/v2/search?search=example&type=page&_fields=' . $this->get_fields_param(),
+                            'raw'   => '{{baseUrl}}/wp-json/wp/v2/search?search=example&type=page&_fields=' . $this->get_search_fields_param(),
                             'host'  => ['{{baseUrl}}'],
                             'path'  => ['wp-json', 'wp', 'v2', 'search'],
                             'query' => [
@@ -359,7 +369,7 @@ class Postman_Routes {
                                 ],
                                 [
                                     'key'   => '_fields',
-                                    'value' => $this->get_fields_param(),
+                                    'value' => $this->get_search_fields_param(),
                                 ],
                             ],
                         ],
@@ -372,7 +382,7 @@ class Postman_Routes {
                         'method'      => 'GET',
                         'header'      => $this->get_default_headers(),
                         'url'         => [
-                            'raw'   => '{{baseUrl}}/wp-json/wp/v2/search?search=example&_fields=' . $this->get_fields_param(),
+                            'raw'   => '{{baseUrl}}/wp-json/wp/v2/search?search=example&_fields=' . $this->get_search_fields_param(),
                             'host'  => ['{{baseUrl}}'],
                             'path'  => ['wp-json', 'wp', 'v2', 'search'],
                             'query' => [
@@ -382,7 +392,7 @@ class Postman_Routes {
                                 ],
                                 [
                                     'key'   => '_fields',
-                                    'value' => $this->get_fields_param(),
+                                    'value' => $this->get_search_fields_param(),
                                 ],
                             ],
                         ],
