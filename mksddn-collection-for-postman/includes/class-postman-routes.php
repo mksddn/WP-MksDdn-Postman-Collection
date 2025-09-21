@@ -308,6 +308,90 @@ class Postman_Routes {
             ];
         }
 
+        // Add Search route
+        $basic_routes[] = [
+            'name' => 'Search',
+            'item' => [
+                [
+                    'name'    => 'Search Posts',
+                    'request' => [
+                        'method'      => 'GET',
+                        'header'      => $this->get_default_headers(),
+                        'url'         => [
+                            'raw'   => '{{baseUrl}}/wp-json/wp/v2/search?search=example&type=post&_fields=' . $this->get_fields_param(),
+                            'host'  => ['{{baseUrl}}'],
+                            'path'  => ['wp-json', 'wp', 'v2', 'search'],
+                            'query' => [
+                                [
+                                    'key'   => 'search',
+                                    'value' => 'example',
+                                ],
+                                [
+                                    'key'   => 'type',
+                                    'value' => 'post',
+                                ],
+                                [
+                                    'key'   => '_fields',
+                                    'value' => $this->get_fields_param(),
+                                ],
+                            ],
+                        ],
+                        'description' => 'Search for posts with keyword "example"',
+                    ],
+                ],
+                [
+                    'name'    => 'Search Pages',
+                    'request' => [
+                        'method'      => 'GET',
+                        'header'      => $this->get_default_headers(),
+                        'url'         => [
+                            'raw'   => '{{baseUrl}}/wp-json/wp/v2/search?search=example&type=page&_fields=' . $this->get_fields_param(),
+                            'host'  => ['{{baseUrl}}'],
+                            'path'  => ['wp-json', 'wp', 'v2', 'search'],
+                            'query' => [
+                                [
+                                    'key'   => 'search',
+                                    'value' => 'example',
+                                ],
+                                [
+                                    'key'   => 'type',
+                                    'value' => 'page',
+                                ],
+                                [
+                                    'key'   => '_fields',
+                                    'value' => $this->get_fields_param(),
+                                ],
+                            ],
+                        ],
+                        'description' => 'Search for pages with keyword "example"',
+                    ],
+                ],
+                [
+                    'name'    => 'Search All',
+                    'request' => [
+                        'method'      => 'GET',
+                        'header'      => $this->get_default_headers(),
+                        'url'         => [
+                            'raw'   => '{{baseUrl}}/wp-json/wp/v2/search?search=example&_fields=' . $this->get_fields_param(),
+                            'host'  => ['{{baseUrl}}'],
+                            'path'  => ['wp-json', 'wp', 'v2', 'search'],
+                            'query' => [
+                                [
+                                    'key'   => 'search',
+                                    'value' => 'example',
+                                ],
+                                [
+                                    'key'   => '_fields',
+                                    'value' => $this->get_fields_param(),
+                                ],
+                            ],
+                        ],
+                        'description' => 'Search across all content types with keyword "example"',
+                    ],
+                ],
+            ],
+        ];
+
         return $basic_routes;
     }
 

@@ -17,6 +17,7 @@ The plugin provides comprehensive API testing capabilities with automatic genera
 
 Features:
 - Basic REST endpoints: pages, posts, categories, tags, taxonomies, comments, users, settings
+- Search functionality: Posts, Pages, and All content types with customizable queries
 - Custom Post Types with full CRUD operations (List, Get by Slug/ID, Create, Update, Delete)
 - Special handling for Forms (mksddn-forms-handler integration)
 - Options endpoints: `/wp-json/custom/v1/options/...`
@@ -24,6 +25,7 @@ Features:
 - Automatic test data generation for form submissions
 - Support for multipart/form-data for file uploads
 - Yoast SEO integration (automatic yoast_head_json inclusion)
+- Multilingual support with Accept-Language headers (Polylang priority)
 - Extensible via WordPress filters
 - WP-CLI integration for command-line usage
 
@@ -70,7 +72,11 @@ Yes. The plugin provides WordPress filters for customization:
 = 1.0.2 =
 - Added Yoast SEO integration: automatic inclusion of yoast_head_json in _fields parameter for pages and posts
 - Enhanced REST API requests to include SEO metadata when Yoast SEO plugin is active
-- Improved documentation with Yoast SEO support details
+- Added Accept-Language header support for multilingual sites with Polylang priority
+- Implemented automatic language detection from Polylang settings or WordPress locale
+- Added Search functionality with three search types: Posts, Pages, and All content
+- Enhanced all GET requests with proper Accept-Language headers for internationalization
+- Improved documentation with comprehensive multilingual and SEO support details
 
 = 1.0.1 =
 - Changed plugin name from "MksDdn Postman Collection" to "MksDdn Collection for Postman"
@@ -83,7 +89,7 @@ Initial public release.
 
 == Upgrade Notice ==
 = 1.0.2 =
-Added Yoast SEO integration for enhanced SEO metadata in REST API requests. No migration steps are required.
+Major feature update: Added Yoast SEO integration, multilingual support with Polylang priority, and comprehensive search functionality. All GET requests now include proper Accept-Language headers. No migration steps are required.
 
 = 1.0.1 =
 Plugin name and slug updated for WordPress.org compliance. No migration steps are required.
