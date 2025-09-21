@@ -17,6 +17,7 @@
   - пользовательские типы записей (CPT), включая специальные маршруты для `forms`
   - страницы опций (эндпоинты вида `/wp-json/custom/v1/options/...`)
   - индивидуально выбранные страницы по слагам
+- Автоматическое включение SEO-данных Yoast (`yoast_head_json`) в параметр `_fields` для pages и posts при активном плагине Yoast SEO
 - Скачивание JSON-файла коллекции из админки.
 
 ### Архитектура и компоненты
@@ -32,6 +33,10 @@
  - Для каждой формы добавляются два роута:
    - GET `wp-json/mksddn-forms-handler/v1/forms/{slug}` — получение информации о форме
    - POST `wp-json/mksddn-forms-handler/v1/forms/{slug}/submit` — отправка данных формы (тело запроса заполняется автогенерируемыми примерами значений)
+
+Примечание по интеграции с Yoast SEO:
+- Если установлен и активен плагин Yoast SEO (`wordpress-seo/wp-seo.php`), параметр `_fields` для pages и posts автоматически дополняется значением `yoast_head_json`
+- Это позволяет получать SEO-метаданные (title, description, og:tags и т.д.) через REST API без дополнительных запросов
 
 Примеры генерации тестовых данных для полей форм:
 - Поддерживаются типы: `text`, `email`, `password`, `tel`, `url`, `number` (учёт `min`/`max`/`step`), `date`, `time`, `datetime-local`, `textarea`, `checkbox`, `radio`, `select` (включая `multiple`), `file` (включая `multiple`).

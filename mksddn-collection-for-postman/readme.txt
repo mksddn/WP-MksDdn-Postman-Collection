@@ -4,7 +4,7 @@ Tags: rest api, postman, collection, developer-tools
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 8.1
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -23,6 +23,7 @@ Features:
 - Individual pages by slug with ACF field support
 - Automatic test data generation for form submissions
 - Support for multipart/form-data for file uploads
+- Yoast SEO integration (automatic yoast_head_json inclusion)
 - Extensible via WordPress filters
 - WP-CLI integration for command-line usage
 
@@ -66,6 +67,11 @@ Yes. The plugin provides WordPress filters for customization:
 1. Admin screen with page selection and download button.
 
 == Changelog ==
+= 1.0.2 =
+- Added Yoast SEO integration: automatic inclusion of yoast_head_json in _fields parameter for pages and posts
+- Enhanced REST API requests to include SEO metadata when Yoast SEO plugin is active
+- Improved documentation with Yoast SEO support details
+
 = 1.0.1 =
 - Changed plugin name from "MksDdn Postman Collection" to "MksDdn Collection for Postman"
 - Updated plugin slug from "mksddn-postman-collection" to "mksddn-collection-for-postman"
@@ -76,6 +82,9 @@ Yes. The plugin provides WordPress filters for customization:
 Initial public release.
 
 == Upgrade Notice ==
+= 1.0.2 =
+Added Yoast SEO integration for enhanced SEO metadata in REST API requests. No migration steps are required.
+
 = 1.0.1 =
 Plugin name and slug updated for WordPress.org compliance. No migration steps are required.
 

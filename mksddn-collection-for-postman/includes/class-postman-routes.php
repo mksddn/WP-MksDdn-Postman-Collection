@@ -9,6 +9,47 @@
 class Postman_Routes {
 
 
+    /**
+     * Check if Yoast SEO plugin is active.
+     *
+     * @return bool
+     */
+    private function is_yoast_active(): bool {
+        if (!function_exists('is_plugin_active')) {
+            require_once ABSPATH . 'wp-admin/includes/plugin.php';
+        }
+        return function_exists('is_plugin_active') && is_plugin_active('wordpress-seo/wp-seo.php');
+    }
+
+
+    /**
+     * Get _fields parameter value for pages and posts, including Yoast if active.
+     *
+     * @return string
+     */
+    private function get_fields_param(): string {
+        $fields = 'id,slug,title';
+        if ($this->is_yoast_active()) {
+            $fields .= ',yoast_head_json';
+        }
+        return $fields;
+    }
+
+
+    /**
+     * Get detailed _fields parameter value for pages and posts, including ACF and Yoast if active.
+     *
+     * @return string
+     */
+    private function get_detailed_fields_param(): string {
+        $fields = 'title,acf,content';
+        if ($this->is_yoast_active()) {
+            $fields .= ',yoast_head_json';
+        }
+        return $fields;
+    }
+
+
     public function get_basic_routes(): array {
         $basic_routes = [];
 
@@ -36,7 +77,7 @@ class Postman_Routes {
                     'url'         => [
                         'raw'   => (
                             in_array($entity, ['pages', 'posts'], true)
-                            ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=id,slug,title', $entity)
+                            ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s', $entity, $this->get_fields_param())
                             : '{{baseUrl}}/wp-json/wp/v2/' . $entity
                         ),
                         'host'  => ['{{baseUrl}}'],
@@ -46,7 +87,7 @@ class Postman_Routes {
                             ? [
                                 [
                                     'key'   => '_fields',
-                                    'value' => 'id,slug,title',
+                                    'value' => $this->get_fields_param(),
                                 ],
                             ]
                             : []
@@ -65,7 +106,7 @@ class Postman_Routes {
                     'url'         => [
                         'raw'   => (
                             in_array($entity, ['pages', 'posts'], true)
-                            ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=', $entity) . ($entity === 'pages' ? 'sample-page' : 'hello-world') . '&acf_format=standard&_fields=title,acf,content'
+                            ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=', $entity) . ($entity === 'pages' ? 'sample-page' : 'hello-world') . '&acf_format=standard&_fields=' . $this->get_detailed_fields_param()
                             : sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=', $entity) . ($entity === 'categories' ? 'uncategorized' : 'example')
                         ),
                         'host'  => ['{{baseUrl}}'],
@@ -83,7 +124,7 @@ class Postman_Routes {
                                 ],
                                 [
                                     'key'   => '_fields',
-                                    'value' => 'title,acf,content',
+                                    'value' => $this->get_detailed_fields_param(),
                                 ],
                             ]
                             : [
@@ -107,7 +148,7 @@ class Postman_Routes {
                     'url'         => [
                         'raw'   => (
                             in_array($entity, ['pages', 'posts'])
-                            ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $entity) . $singular . 'ID}}?acf_format=standard&_fields=title,acf,content'
+                            ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $entity) . $singular . 'ID}}?acf_format=standard&_fields=' . $this->get_detailed_fields_param()
                             : sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $entity) . $singular . 'ID}}'
                         ),
                         'host'  => ['{{baseUrl}}'],
@@ -121,7 +162,7 @@ class Postman_Routes {
                                 ],
                                 [
                                     'key'   => '_fields',
-                                    'value' => 'title,acf,content',
+                                    'value' => $this->get_detailed_fields_param(),
                                 ],
                             ]
                             : []
@@ -623,13 +664,13 @@ class Postman_Routes {
                 'method'      => 'GET',
                 'header'      => [],
                 'url'         => [
-                    'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=id,slug,title', $rest_base),
+                    'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s', $rest_base, $this->get_fields_param()),
                     'host'  => ['{{baseUrl}}'],
                     'path'  => ['wp-json', 'wp', 'v2', $rest_base],
                     'query' => [
                         [
                             'key'   => '_fields',
-                            'value' => 'id,slug,title',
+                            'value' => $this->get_fields_param(),
                         ],
                     ],
                 ],
@@ -643,7 +684,7 @@ class Postman_Routes {
                 'url'         => [
                     'raw'   => (
                         in_array($post_type_name, ['pages', 'posts'], true)
-                        ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=', $post_type_name) . ($post_type_name === 'pages' ? 'sample-page' : 'hello-world') . '&acf_format=standard&_fields=title,acf,content'
+                        ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=', $post_type_name) . ($post_type_name === 'pages' ? 'sample-page' : 'hello-world') . '&acf_format=standard&_fields=' . $this->get_detailed_fields_param()
                         : sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=', $post_type_name) . ($post_type_name === 'categories' ? 'uncategorized' : 'example')
                     ),
                     'host'  => ['{{baseUrl}}'],
@@ -661,7 +702,7 @@ class Postman_Routes {
                             ],
                             [
                                 'key'   => '_fields',
-                                'value' => 'title,acf,content',
+                                'value' => $this->get_detailed_fields_param(),
                             ],
                         ]
                         : [
@@ -682,7 +723,7 @@ class Postman_Routes {
                 'url'         => [
                     'raw'   => (
                         in_array($post_type_name, ['pages', 'posts'])
-                        ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $post_type_name) . $singular_label . 'ID}}?acf_format=standard&_fields=title,acf,content'
+                        ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $post_type_name) . $singular_label . 'ID}}?acf_format=standard&_fields=' . $this->get_detailed_fields_param()
                         : sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $post_type_name) . $singular_label . 'ID}}'
                     ),
                     'host'  => ['{{baseUrl}}'],
@@ -696,7 +737,7 @@ class Postman_Routes {
                             ],
                             [
                                 'key'   => '_fields',
-                                'value' => 'title,acf,content',
+                                'value' => $this->get_detailed_fields_param(),
                             ],
                         ]
                         : []
@@ -793,7 +834,7 @@ class Postman_Routes {
                             'method'      => 'GET',
                             'header'      => [],
                             'url'         => [
-                                'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/pages?slug=%s&acf_format=standard&_fields=title,acf,content', $slug),
+                                'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/pages?slug=%s&acf_format=standard&_fields=%s', $slug, $this->get_detailed_fields_param()),
                                 'host'  => ['{{baseUrl}}'],
                                 'path'  => ['wp-json', 'wp', 'v2', 'pages'],
                                 'query' => [
@@ -807,7 +848,7 @@ class Postman_Routes {
                                     ],
                                     [
                                         'key'   => '_fields',
-                                        'value' => 'title,acf,content',
+                                        'value' => $this->get_detailed_fields_param(),
                                     ],
                                 ],
                             ],
