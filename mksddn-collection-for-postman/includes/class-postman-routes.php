@@ -23,6 +23,38 @@ class Postman_Routes {
 
 
     /**
+     * Check if Polylang plugin is active.
+     *
+     * @return bool
+     */
+    private function is_polylang_active(): bool {
+        if (!function_exists('is_plugin_active')) {
+            require_once ABSPATH . 'wp-admin/includes/plugin.php';
+        }
+        return function_exists('is_plugin_active') && is_plugin_active('polylang/polylang.php');
+    }
+
+
+    /**
+     * Get default language from Polylang settings or WordPress locale.
+     *
+     * @return string
+     */
+    private function get_default_language(): string {
+        // Check if Polylang is active and get default language from its settings
+        if ($this->is_polylang_active() && function_exists('pll_default_language')) {
+            $polylang_lang = pll_default_language();
+            if ($polylang_lang) {
+                return $polylang_lang;
+            }
+        }
+        
+        // Fallback to WordPress locale
+        return get_locale();
+    }
+
+
+    /**
      * Get _fields parameter value for pages and posts, including Yoast if active.
      *
      * @return string
@@ -50,6 +82,26 @@ class Postman_Routes {
     }
 
 
+    /**
+     * Get default headers for GET requests, including Accept-Language.
+     *
+     * @return array
+     */
+    private function get_default_headers(): array {
+        $language = $this->get_default_language();
+        
+        // Convert WordPress locale format (ru_RU) to RFC 5646 format (ru-RU)
+        $accept_language = str_replace('_', '-', $language);
+        
+        return [
+            [
+                'key'   => 'Accept-Language',
+                'value' => $accept_language,
+            ],
+        ];
+    }
+
+
     public function get_basic_routes(): array {
         $basic_routes = [];
 
@@ -73,7 +125,7 @@ class Postman_Routes {
                 'name'    => 'List of ' . ucfirst($plural),
                 'request' => [
                     'method'      => 'GET',
-                    'header'      => [],
+                    'header'      => $this->get_default_headers(),
                     'url'         => [
                         'raw'   => (
                             in_array($entity, ['pages', 'posts'], true)
@@ -102,7 +154,7 @@ class Postman_Routes {
                 'name'    => $singular . ' by Slug',
                 'request' => [
                     'method'      => 'GET',
-                    'header'      => [],
+                    'header'      => $this->get_default_headers(),
                     'url'         => [
                         'raw'   => (
                             in_array($entity, ['pages', 'posts'], true)
@@ -144,7 +196,7 @@ class Postman_Routes {
                 'name'    => $singular . ' by ID',
                 'request' => [
                     'method'      => 'GET',
-                    'header'      => [],
+                    'header'      => $this->get_default_headers(),
                     'url'         => [
                         'raw'   => (
                             in_array($entity, ['pages', 'posts'])
@@ -283,7 +335,7 @@ class Postman_Routes {
                 'name'    => $display_name,
                 'request' => [
                     'method'      => 'GET',
-                    'header'      => [],
+                    'header'      => $this->get_default_headers(),
                     'url'         => [
                         'raw'  => '{{baseUrl}}/wp-json/custom/v1/options/' . $page_slug,
                         'host' => ['{{baseUrl}}'],
@@ -300,7 +352,7 @@ class Postman_Routes {
                 'name'    => 'List of Options Pages',
                 'request' => [
                     'method'      => 'GET',
-                    'header'      => [],
+                    'header'      => $this->get_default_headers(),
                     'url'         => [
                         'raw'  => '{{baseUrl}}/wp-json/custom/v1/options',
                         'host' => ['{{baseUrl}}'],
@@ -368,7 +420,7 @@ class Postman_Routes {
             'name'    => 'List of ' . $type_label,
             'request' => [
                 'method'      => 'GET',
-                'header'      => [],
+                'header'      => $this->get_default_headers(),
                 'url'         => [
                     'raw'   => '{{baseUrl}}/wp-json/mksddn-forms-handler/v1/forms/',
                     'host'  => ['{{baseUrl}}'],
@@ -421,7 +473,7 @@ class Postman_Routes {
                         'name'    => 'Get Form Info - ' . $form_title,
                         'request' => [
                             'method'      => 'GET',
-                            'header'      => [],
+                            'header'      => $this->get_default_headers(),
                             'url'         => [
                                 'raw'  => sprintf('{{baseUrl}}/wp-json/mksddn-forms-handler/v1/forms/%s', $slug),
                                 'host' => ['{{baseUrl}}'],
@@ -662,7 +714,7 @@ class Postman_Routes {
             'name'    => 'List of ' . ucfirst($post_type_name),
             'request' => [
                 'method'      => 'GET',
-                'header'      => [],
+                'header'      => $this->get_default_headers(),
                 'url'         => [
                     'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s', $rest_base, $this->get_fields_param()),
                     'host'  => ['{{baseUrl}}'],
@@ -680,7 +732,7 @@ class Postman_Routes {
             'name'    => $singular_label . ' by Slug',
             'request' => [
                 'method'      => 'GET',
-                'header'      => [],
+                'header'      => $this->get_default_headers(),
                 'url'         => [
                     'raw'   => (
                         in_array($post_type_name, ['pages', 'posts'], true)
@@ -719,7 +771,7 @@ class Postman_Routes {
             'name'    => $singular_label . ' by ID',
             'request' => [
                 'method'      => 'GET',
-                'header'      => [],
+                'header'      => $this->get_default_headers(),
                 'url'         => [
                     'raw'   => (
                         in_array($post_type_name, ['pages', 'posts'])
@@ -832,7 +884,7 @@ class Postman_Routes {
                         'name'    => 'Page: ' . $page_title,
                         'request' => [
                             'method'      => 'GET',
-                            'header'      => [],
+                            'header'      => $this->get_default_headers(),
                             'url'         => [
                                 'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/pages?slug=%s&acf_format=standard&_fields=%s', $slug, $this->get_detailed_fields_param()),
                                 'host'  => ['{{baseUrl}}'],
