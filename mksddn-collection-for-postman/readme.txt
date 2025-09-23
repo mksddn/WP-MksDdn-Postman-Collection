@@ -4,7 +4,7 @@ Tags: rest api, postman, collection, developer-tools
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 8.1
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -65,10 +65,32 @@ Yes. The plugin provides WordPress filters for customization:
 - `mksddn_postman_filename` - Customize the download filename
 - `mksddn_postman_capability` - Change required user capability
 
+== External services ==
+
+This plugin references external services for Postman Collection schema validation:
+
+**Postman Collection Schema Service**
+- **Service**: Postman Collection Schema (schema.getpostman.com)
+- **Purpose**: Used to validate and structure the generated Postman Collection JSON according to the official Postman Collection v2.1.0 specification
+- **Data sent**: No data is sent to this service. The plugin only references the schema URL for validation purposes
+- **When**: The schema URL is included in the generated collection metadata for Postman to validate the collection structure
+- **Terms of service**: https://www.postman.com/legal/terms-of-use/
+- **Privacy policy**: https://www.postman.com/legal/privacy-policy/
+
+Note: This plugin does not send any user data to external services. The schema reference is purely for collection structure validation within the Postman application.
+
 == Screenshots ==
 1. Admin screen with page selection and download button.
 
 == Changelog ==
+= 1.0.3 =
+- Fixed WordPress.org Plugin Review compliance issues
+- Replaced inline JavaScript with proper wp_enqueue_scripts usage
+- Added documentation for external services (Postman Collection Schema)
+- Fixed direct core file loading by using WordPress REST API functions
+- Added proper escaping for output variables in JSON generation
+- Improved code security and WordPress Coding Standards compliance
+
 = 1.0.2 =
 - Added Yoast SEO integration: automatic inclusion of yoast_head_json in _fields parameter for pages and posts
 - Enhanced REST API requests to include SEO metadata when Yoast SEO plugin is active
@@ -88,6 +110,9 @@ Yes. The plugin provides WordPress filters for customization:
 Initial public release.
 
 == Upgrade Notice ==
+= 1.0.3 =
+WordPress.org Plugin Review compliance update: Fixed JavaScript enqueuing, added external services documentation, improved security with proper escaping, and replaced direct core file loading. No migration steps required.
+
 = 1.0.2 =
 Major feature update: Added Yoast SEO integration, multilingual support with Polylang priority, and comprehensive search functionality. All GET requests now include proper Accept-Language headers. No migration steps are required.
 

@@ -123,11 +123,11 @@ class Postman_Generator {
         $filename = (string) apply_filters('mksddn_postman_filename', 'postman_collection.json', $collection);
 
         header('Content-Type: application/json');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Disposition: attachment; filename="' . esc_attr($filename) . '"');
         header('Content-Length: ' . strlen($json));
 
         // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Output is a JSON string for download.
-        echo $json;
+        echo wp_json_encode($collection, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         exit;
     }
 

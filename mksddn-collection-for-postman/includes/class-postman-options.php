@@ -54,7 +54,10 @@ class Postman_Options {
 
     private function ensure_rest_server_loaded(): void {
         if (!class_exists('WP_REST_Server')) {
-            require_once ABSPATH . 'wp-includes/rest-api/class-wp-rest-server.php';
+            // Use WordPress REST API functions instead of direct file inclusion
+            if (function_exists('rest_get_server')) {
+                rest_get_server();
+            }
         }
     }
 

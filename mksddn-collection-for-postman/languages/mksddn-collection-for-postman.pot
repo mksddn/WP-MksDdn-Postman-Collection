@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: MksDdn Collection for Postman 1.0.2\n"
+"Project-Id-Version: MksDdn Collection for Postman 1.0.3\n"
 "Report-Msgid-Bugs-To: https://github.com/mksddn/WP-MksDdn-Postman-Collection/issues\n"
 "POT-Creation-Date: 2025-08-19 00:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"

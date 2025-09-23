@@ -22,6 +22,7 @@ class Postman_Admin {
 
         add_action('admin_menu', [ $this, 'add_admin_menu' ]);
         add_action('admin_post_generate_postman_collection', [ $this, 'handle_generation' ]);
+        add_action('admin_enqueue_scripts', [ $this, 'enqueue_admin_scripts' ]);
     }
 
 
@@ -155,7 +156,6 @@ class Postman_Admin {
         echo '<h1>' . esc_html__('Generate Postman Collection', 'mksddn-collection-for-postman') . '</h1>';
 
         $this->render_form($data);
-        $this->render_javascript();
 
         echo '</div>';
     }
@@ -196,24 +196,31 @@ class Postman_Admin {
     }
 
 
-    private function render_javascript(): void {
-        echo '<script>
+    public function enqueue_admin_scripts(string $hook): void {
+        // Only load scripts on our admin page
+        if ($hook !== 'toplevel_page_' . self::MENU_SLUG) {
+            return;
+        }
+
+        $script_content = "
         function selectAll(name) {
-            document.querySelectorAll("input[name=\'" + name + "[]\']").forEach(checkbox => checkbox.checked = true);
+            document.querySelectorAll('input[name=\"' + name + '[]\"]').forEach(checkbox => checkbox.checked = true);
         }
 
         function deselectAll(name) {
-            document.querySelectorAll("input[name=\'" + name + "[]\']").forEach(checkbox => checkbox.checked = false);
+            document.querySelectorAll('input[name=\"' + name + '[]\"]').forEach(checkbox => checkbox.checked = false);
         }
 
         function selectAllCustom(name) {
-            document.querySelectorAll("input[name=\'custom_post_type_slugs[" + name + "][]\']").forEach(checkbox => checkbox.checked = true);
+            document.querySelectorAll('input[name=\"custom_post_type_slugs[' + name + '][]\"]').forEach(checkbox => checkbox.checked = true);
         }
 
         function deselectAllCustom(name) {
-            document.querySelectorAll("input[name=\'custom_post_type_slugs[" + name + "][]\']").forEach(checkbox => checkbox.checked = false);
+            document.querySelectorAll('input[name=\"custom_post_type_slugs[' + name + '][]\"]').forEach(checkbox => checkbox.checked = false);
         }
-        </script>';
+        ";
+
+        wp_add_inline_script('jquery', $script_content);
     }
 
 
