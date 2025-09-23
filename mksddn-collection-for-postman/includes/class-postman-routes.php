@@ -69,6 +69,27 @@ class Postman_Routes {
 
 
     /**
+     * Get extended _fields parameter value for posts, including additional fields.
+     *
+     * @return string
+     */
+    private function get_posts_fields_param(): string {
+        $fields = 'id,slug,title,date,status,excerpt,featured_media,sticky,categories,tags';
+        return $fields;
+    }
+
+
+    /**
+     * Get _fields parameter value for categories, including additional fields.
+     *
+     * @return string
+     */
+    private function get_categories_fields_param(): string {
+        return 'id,count,description,name,slug,taxonomy,parent,thumbnail,acf,meta';
+    }
+
+
+    /**
      * Get detailed _fields parameter value for pages and posts, including ACF and Yoast if active.
      *
      * @return string
@@ -93,7 +114,7 @@ class Postman_Routes {
 
 
     /**
-     * Get default headers for GET requests, including Accept-Language.
+     * Get default headers for GET requests, including Accept-Language (disabled by default).
      *
      * @return array
      */
@@ -105,8 +126,9 @@ class Postman_Routes {
         
         return [
             [
-                'key'   => 'Accept-Language',
-                'value' => $accept_language,
+                'key'      => 'Accept-Language',
+                'value'    => $accept_language,
+                'disabled' => true,
             ],
         ];
     }
@@ -120,7 +142,6 @@ class Postman_Routes {
             'posts'      => 'Post',
             'categories' => 'Category',
             'tags'       => 'Tag',
-            'taxonomies' => 'Taxonomy',
             'comments'   => 'Comment',
             'users'      => 'User',
             'settings'   => 'Setting',
@@ -138,21 +159,44 @@ class Postman_Routes {
                     'header'      => $this->get_default_headers(),
                     'url'         => [
                         'raw'   => (
-                            in_array($entity, ['pages', 'posts'], true)
+                            $entity === 'posts'
+                            ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s&categories=1', $entity, $this->get_posts_fields_param())
+                            : ($entity === 'categories'
+                            ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s', $entity, $this->get_categories_fields_param())
+                            : (in_array($entity, ['pages'], true)
                             ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s', $entity, $this->get_fields_param())
-                            : '{{baseUrl}}/wp-json/wp/v2/' . $entity
+                            : '{{baseUrl}}/wp-json/wp/v2/' . $entity))
                         ),
                         'host'  => ['{{baseUrl}}'],
                         'path'  => ['wp-json', 'wp', 'v2', $entity],
                         'query' => (
-                            in_array($entity, ['pages', 'posts'], true)
+                            $entity === 'posts'
+                            ? [
+                                [
+                                    'key'   => '_fields',
+                                    'value' => $this->get_posts_fields_param(),
+                                ],
+                                [
+                                    'key'      => 'categories',
+                                    'value'    => '1',
+                                    'disabled' => true,
+                                ],
+                            ]
+                            : ($entity === 'categories'
+                            ? [
+                                [
+                                    'key'   => '_fields',
+                                    'value' => $this->get_categories_fields_param(),
+                                ],
+                            ]
+                            : (in_array($entity, ['pages'], true)
                             ? [
                                 [
                                     'key'   => '_fields',
                                     'value' => $this->get_fields_param(),
                                 ],
                             ]
-                            : []
+                            : []))
                         ),
                     ],
                     'description' => 'Get list of all ' . $plural,
@@ -189,12 +233,24 @@ class Postman_Routes {
                                     'value' => $this->get_detailed_fields_param(),
                                 ],
                             ]
+                            : ($entity === 'categories'
+                            ? [
+                                [
+                                    'key'   => 'slug',
+                                    'value' => 'uncategorized',
+                                ],
+                                [
+                                    'key'      => 'parent',
+                                    'value'    => '1',
+                                    'disabled' => true,
+                                ],
+                            ]
                             : [
                                 [
                                     'key'   => 'slug',
-                                    'value' => ($entity === 'categories' ? 'uncategorized' : 'example'),
+                                    'value' => 'example',
                                 ],
-                            ]
+                            ])
                         ),
                     ],
                     'description' => sprintf('Get specific %s by slug', $singular) . (in_array($entity, ['pages', 'posts']) ? ' with ACF fields' : ''),
@@ -227,7 +283,15 @@ class Postman_Routes {
                                     'value' => $this->get_detailed_fields_param(),
                                 ],
                             ]
-                            : []
+                            : ($entity === 'categories'
+                            ? [
+                                [
+                                    'key'      => 'parent',
+                                    'value'    => '1',
+                                    'disabled' => true,
+                                ],
+                            ]
+                            : [])
                         ),
                     ],
                     'description' => sprintf('Get specific %s by ID', $singular) . (in_array($entity, ['pages', 'posts']) ? ' with ACF fields' : ''),
@@ -965,47 +1029,51 @@ class Postman_Routes {
 
 
     public function get_individual_page_routes(array $selected_page_slugs): array {
-        $individual_routes = [];
+        if (empty($selected_page_slugs)) {
+            return [];
+        }
+
+        $specific_pages_items = [];
 
         foreach ($selected_page_slugs as $slug) {
             $page = get_page_by_path($slug, OBJECT, 'page');
             $page_title = $page ? $page->post_title : $slug;
 
-            $individual_routes[] = [
-                'name' => 'Page: ' . $page_title,
-                'item' => [
-                    [
-                        'name'    => 'Page: ' . $page_title,
-                        'request' => [
-                            'method'      => 'GET',
-                            'header'      => $this->get_default_headers(),
-                            'url'         => [
-                                'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/pages?slug=%s&acf_format=standard&_fields=%s', $slug, $this->get_detailed_fields_param()),
-                                'host'  => ['{{baseUrl}}'],
-                                'path'  => ['wp-json', 'wp', 'v2', 'pages'],
-                                'query' => [
-                                    [
-                                        'key'   => 'slug',
-                                        'value' => $slug,
-                                    ],
-                                    [
-                                        'key'   => 'acf_format',
-                                        'value' => 'standard',
-                                    ],
-                                    [
-                                        'key'   => '_fields',
-                                        'value' => $this->get_detailed_fields_param(),
-                                    ],
-                                ],
+            $specific_pages_items[] = [
+                'name'    => $page_title,
+                'request' => [
+                    'method'      => 'GET',
+                    'header'      => $this->get_default_headers(),
+                    'url'         => [
+                        'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/pages?slug=%s&acf_format=standard&_fields=%s', $slug, $this->get_detailed_fields_param()),
+                        'host'  => ['{{baseUrl}}'],
+                        'path'  => ['wp-json', 'wp', 'v2', 'pages'],
+                        'query' => [
+                            [
+                                'key'   => 'slug',
+                                'value' => $slug,
                             ],
-                            'description' => sprintf('Get %s by slug with ACF fields', $page_title),
+                            [
+                                'key'   => 'acf_format',
+                                'value' => 'standard',
+                            ],
+                            [
+                                'key'   => '_fields',
+                                'value' => $this->get_detailed_fields_param(),
+                            ],
                         ],
                     ],
+                    'description' => sprintf('Get %s by slug with ACF fields', $page_title),
                 ],
             ];
         }
 
-        return $individual_routes;
+        return [
+            [
+                'name' => 'Specific Pages',
+                'item' => $specific_pages_items,
+            ],
+        ];
     }
 
 
