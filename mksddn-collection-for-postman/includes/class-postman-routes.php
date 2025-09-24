@@ -1076,6 +1076,66 @@ class Postman_Routes {
         ];
     }
 
+	/**
+	 * Build routes for posts filtered by selected categories (by slug).
+	 */
+	public function get_posts_by_categories_routes(array $selected_category_slugs): array {
+		if (empty($selected_category_slugs)) {
+			return [];
+		}
+
+		$items = [];
+		foreach ($selected_category_slugs as $slug) {
+			$term = get_term_by('slug', $slug, 'category');
+			if (!$term || is_wp_error($term)) {
+				continue;
+			}
+			$term_id = (int) $term->term_id;
+			$name = (string) $term->name;
+
+			$items[] = [
+				'name'    => sprintf('Posts in %s', $name),
+				'request' => [
+					'method'      => 'GET',
+					'header'      => $this->get_default_headers(),
+					'url'         => [
+						'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/posts?_fields=%s&categories=%d', $this->get_posts_fields_param(), $term_id),
+						'host'  => ['{{baseUrl}}'],
+						'path'  => ['wp-json', 'wp', 'v2', 'posts'],
+						'query' => [
+							[
+								'key'   => '_fields',
+								'value' => $this->get_posts_fields_param(),
+							],
+							[
+								'key'   => 'categories',
+								'value' => (string) $term_id,
+							],
+							[
+								'key'      => 'page',
+								'value'    => '1',
+								'disabled' => true,
+							],
+							[
+								'key'      => 'per_page',
+								'value'    => '10',
+								'disabled' => true,
+							],
+							[
+								'key'      => 'offset',
+								'value'    => '0',
+								'disabled' => true,
+							],
+						],
+					],
+					'description' => sprintf('Get posts filtered by category \"%s\" (ID %d)', $name, $term_id),
+				],
+			];
+		}
+
+		return $items;
+	}
+
 
     public function get_variables(array $custom_post_types): array {
         $variables = [

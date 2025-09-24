@@ -64,6 +64,8 @@ class Postman_Admin {
             'selected_post_slugs' => $this->get_selected_post_slugs(),
             'selected_custom_slugs' => $this->get_selected_custom_slugs(),
             'selected_options_pages' => $this->get_selected_options_pages(),
+            'categories' => $this->get_categories(),
+            'selected_category_slugs' => $this->get_selected_category_slugs(),
         ];
     }
 
@@ -100,6 +102,21 @@ class Postman_Admin {
             'post_status' => 'publish',
         ]);
     }
+
+	/**
+	 * Get categories terms.
+	 *
+	 * @return array List of WP_Term for taxonomy 'category'
+	 */
+	private function get_categories(): array {
+		$terms = get_terms([
+			'taxonomy' => 'category',
+			'hide_empty' => false,
+			'orderby' => 'name',
+			'order' => 'ASC',
+		]);
+		return is_array($terms) ? $terms : [];
+	}
 
 
     private function get_custom_posts(array $custom_post_types): array {
@@ -151,6 +168,13 @@ class Postman_Admin {
     }
 
 
+    private function get_selected_category_slugs(): array {
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Used only to pre-fill admin form; nonce is verified on action submit and values are sanitized below.
+        $slugs = isset($_POST['custom_category_slugs']) ? (array) wp_unslash($_POST['custom_category_slugs']) : [];
+        return array_values(array_filter(array_map('sanitize_title', $slugs)));
+    }
+
+
     private function render_admin_page(array $data): void {
         echo '<div class="wrap">';
         echo '<h1>' . esc_html__('Generate Postman Collection', 'mksddn-collection-for-postman') . '</h1>';
@@ -170,6 +194,10 @@ class Postman_Admin {
         $this->render_selection_buttons();
         $this->render_pages_list($data['pages'], $data['selected_page_slugs']);
 
+        echo '<h3>' . esc_html__('Add requests for posts by categories:', 'mksddn-collection-for-postman') . '</h3>';
+        $this->render_selection_buttons_categories();
+        $this->render_categories_list($data['categories'], $data['selected_category_slugs']);
+
         echo '<br><button class="button button-primary" name="generate_postman">' . esc_html__('Generate and download collection', 'mksddn-collection-for-postman') . '</button>';
         echo '</form>';
     }
@@ -183,6 +211,14 @@ class Postman_Admin {
     }
 
 
+    private function render_selection_buttons_categories(): void {
+        echo '<div style="margin-bottom: 10px;">';
+        echo '<button type="button" class="button" onclick="selectAll(\'custom_category_slugs\')">' . esc_html__('Select All', 'mksddn-collection-for-postman') . '</button> ';
+        echo '<button type="button" class="button" onclick="deselectAll(\'custom_category_slugs\')">' . esc_html__('Deselect All', 'mksddn-collection-for-postman') . '</button>';
+        echo '</div>';
+    }
+
+
     private function render_pages_list(array $pages, array $selected_slugs): void {
         echo '<ul style="max-height:200px;overflow:auto;border:1px solid #eee;padding:10px;margin-bottom:20px;">';
         foreach ($pages as $page) {
@@ -190,6 +226,23 @@ class Postman_Admin {
             echo '<li><label><input type="checkbox" name="custom_page_slugs[]" value="' . esc_attr($slug) . '"';
             checked(in_array($slug, $selected_slugs, true), true);
             echo '> ' . esc_html($page->post_title) . ' <span style="color:#888">(' . esc_html($slug) . ')</span></label></li>';
+        }
+
+        echo '</ul>';
+    }
+
+
+    private function render_categories_list(array $categories, array $selected_slugs): void {
+        echo '<ul style="max-height:200px;overflow:auto;border:1px solid #eee;padding:10px;margin-bottom:20px;">';
+        foreach ($categories as $cat) {
+            $slug = isset($cat->slug) ? (string) $cat->slug : '';
+            $name = isset($cat->name) ? (string) $cat->name : $slug;
+            if ($slug === '') {
+                continue;
+            }
+            echo '<li><label><input type="checkbox" name="custom_category_slugs[]" value="' . esc_attr($slug) . '"';
+            checked(in_array($slug, $selected_slugs, true), true);
+            echo '> ' . esc_html($name) . ' <span style="color:#888">(' . esc_html($slug) . ')</span></label></li>';
         }
 
         echo '</ul>';
@@ -233,6 +286,7 @@ class Postman_Admin {
             'post_slugs' => $this->get_selected_post_slugs(),
             'custom_slugs' => $this->get_selected_custom_slugs(),
             'options_pages' => $this->get_selected_options_pages(),
+            'category_slugs' => $this->get_selected_category_slugs(),
         ];
 
         $generator = new Postman_Generator();
@@ -240,7 +294,8 @@ class Postman_Admin {
             $selected_data['page_slugs'],
             $selected_data['post_slugs'],
             $selected_data['custom_slugs'],
-            $selected_data['options_pages']
+            $selected_data['options_pages'],
+            $selected_data['category_slugs']
         );
     }
 

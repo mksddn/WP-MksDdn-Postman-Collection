@@ -22,11 +22,11 @@ class Postman_Generator {
     }
 
 
-    public function generate_and_download(array $selected_page_slugs, array $selected_post_slugs, array $selected_custom_slugs, array $selected_options_pages): void {
+    public function generate_and_download(array $selected_page_slugs, array $selected_post_slugs, array $selected_custom_slugs, array $selected_options_pages, array $selected_category_slugs = []): void {
         $post_types = get_post_types(['public' => true], 'objects');
         $custom_post_types = $this->filter_custom_post_types($post_types);
 
-        $collection = $this->build_collection($custom_post_types, $selected_page_slugs);
+        $collection = $this->build_collection($custom_post_types, $selected_page_slugs, $selected_category_slugs);
 
         $this->download_collection($collection);
     }
@@ -36,10 +36,10 @@ class Postman_Generator {
      * Build collection and return as array without sending download headers.
      * Intended for programmatic usage (e.g., WP-CLI).
      */
-    public function generate_collection_array(array $selected_page_slugs): array {
+    public function generate_collection_array(array $selected_page_slugs, array $selected_category_slugs = []): array {
         $post_types = get_post_types(['public' => true], 'objects');
         $custom_post_types = $this->filter_custom_post_types($post_types);
-        return $this->build_collection($custom_post_types, $selected_page_slugs);
+        return $this->build_collection($custom_post_types, $selected_page_slugs, $selected_category_slugs);
     }
 
 
@@ -55,7 +55,7 @@ class Postman_Generator {
     }
 
 
-    private function build_collection(array $custom_post_types, array $selected_page_slugs): array {
+    private function build_collection(array $custom_post_types, array $selected_page_slugs, array $selected_category_slugs = []): array {
         $items = [];
 
         // Basic Routes
@@ -85,6 +85,15 @@ class Postman_Generator {
         // Individual selected pages
         $individual_routes = $this->routes_handler->get_individual_page_routes($selected_page_slugs);
         $items = array_merge($items, $individual_routes);
+
+        // Posts by selected categories
+        $posts_by_categories = $this->routes_handler->get_posts_by_categories_routes($selected_category_slugs);
+        if ($posts_by_categories !== []) {
+            $items[] = [
+                'name' => 'Posts by Categories',
+                'item' => $posts_by_categories,
+            ];
+        }
 
         $collection = [
             'info' => $this->get_collection_info(),
