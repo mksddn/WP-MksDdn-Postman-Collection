@@ -160,7 +160,7 @@ class Postman_Routes {
                     'url'         => [
                         'raw'   => (
                             $entity === 'posts'
-                            ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s&categories=1&orderby=date&order=desc&page=1&per_page=10&offset=0', $entity, $this->get_posts_fields_param())
+                            ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s&categories=1', $entity, $this->get_posts_fields_param())
                             : ($entity === 'categories'
                             ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s', $entity, $this->get_categories_fields_param())
                             : (in_array($entity, ['pages'], true)
@@ -181,31 +181,6 @@ class Postman_Routes {
                                     'value'    => '1',
                                     'disabled' => true,
                                 ],
-                                [
-                                    'key'      => 'orderby',
-                                    'value'    => 'date',
-                                    'disabled' => true,
-                                ],
-                                [
-                                    'key'      => 'order',
-                                    'value'    => 'desc',
-                                    'disabled' => true,
-                                ],
-                                [
-                                    'key'      => 'page',
-                                    'value'    => '1',
-                                    'disabled' => true,
-                                ],
-                                [
-                                    'key'      => 'per_page',
-                                    'value'    => '10',
-                                    'disabled' => true,
-                                ],
-                                [
-                                    'key'      => 'offset',
-                                    'value'    => '0',
-                                    'disabled' => true,
-                                ],
                             ]
                             : ($entity === 'categories'
                             ? [
@@ -224,7 +199,7 @@ class Postman_Routes {
                             : []))
                         ),
                     ],
-                    'description' => 'Get list of all ' . $plural . ($entity === 'posts' ? ' with sorting and pagination options' : ''),
+                    'description' => 'Get list of all ' . $plural,
                 ],
             ];
 
