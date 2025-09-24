@@ -4,7 +4,7 @@ Tags: rest api, postman, collection, developer-tools
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 8.1
-Stable tag: 1.0.3
+Stable tag: 1.0.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,10 @@ Note: This plugin does not send any user data to external services. The schema r
 1. Admin screen with page selection and download button.
 
 == Changelog ==
+= 1.0.4 =
+- New: Category selection in admin to generate requests for posts by selected categories
+- New: "Posts by Categories" folder in the collection
+
 = 1.0.3 =
 - Fixed WordPress.org Plugin Review compliance issues
 - Replaced inline JavaScript with proper wp_enqueue_scripts usage
@@ -108,17 +112,3 @@ Note: This plugin does not send any user data to external services. The schema r
 
 = 1.0.0 =
 Initial public release.
-
-== Upgrade Notice ==
-= 1.0.3 =
-WordPress.org Plugin Review compliance update: Fixed JavaScript enqueuing, added external services documentation, improved security with proper escaping, and replaced direct core file loading. No migration steps required.
-
-= 1.0.2 =
-Major feature update: Added Yoast SEO integration, multilingual support with Polylang priority, and comprehensive search functionality. All GET requests now include proper Accept-Language headers. No migration steps are required.
-
-= 1.0.1 =
-Plugin name and slug updated for WordPress.org compliance. No migration steps are required.
-
-= 1.0.0 =
-Initial public release. No migration steps are required.
-
