@@ -112,3 +112,7 @@ docs/temp/
 # Git
 .git/
 .gitignore.bak 
+
+# WordPress.org SVN
+.svn
+tags/
