@@ -2,9 +2,9 @@
 Contributors: mksddn
 Tags: rest api, postman, collection, developer-tools
 Requires at least: 6.2
-Tested up to: 6.8
+Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.4
+Stable tag: 1.0.5
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,10 @@ Note: This plugin does not send any user data to external services. The schema r
 1. Admin screen with page selection and download button.
 
 == Changelog ==
+= 1.0.5 =
+- Updated: Tested up to WordPress 6.9
+- Verified compatibility with WordPress 6.9 changes (UTF-8 modernization, REST API stability)
+
 = 1.0.4 =
 - New: Category selection in admin to generate requests for posts by selected categories
 - New: "Posts by Categories" folder in the collection
