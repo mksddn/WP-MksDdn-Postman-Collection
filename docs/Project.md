@@ -59,6 +59,12 @@
 - Поддерживается параметр `_fields` для оптимизации ответа
 - Поиск работает через стандартный WordPress REST API endpoint `/wp-json/wp/v2/search`
 
+Примечание по пагинации:
+- Все запросы типа "List of ..." (List of Posts, List of Pages, List of any CPT и т.п.) автоматически включают параметры пагинации `page` и `per_page`
+- Параметры пагинации по умолчанию отключены (`disabled: true`) в Postman, чтобы не влиять на существующие запросы
+- Значения по умолчанию: `page=1`, `per_page=10`
+- Параметры пагинации добавляются для всех сущностей, поддерживающих пагинацию в WordPress REST API (posts, pages, categories, tags, comments, users, CPT), за исключением `settings`
+
 Примеры генерации тестовых данных для полей форм:
 - Поддерживаются типы: `text`, `email`, `password`, `tel`, `url`, `number` (учёт `min`/`max`/`step`), `date`, `time`, `datetime-local`, `textarea`, `checkbox`, `radio`, `select` (включая `multiple`), `file` (включая `multiple`).
 - Для `select`/`radio` поддерживаются варианты options как массив строк или массив объектов `{value,label}`; выбирается первое значение (или первые 1–2 при `multiple`).

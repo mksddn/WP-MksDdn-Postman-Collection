@@ -134,6 +134,27 @@ class Postman_Routes {
     }
 
 
+    /**
+     * Get pagination query parameters (page and per_page) for list requests.
+     *
+     * @return array
+     */
+    private function get_pagination_params(): array {
+        return [
+            [
+                'key'      => 'page',
+                'value'    => '1',
+                'disabled' => true,
+            ],
+            [
+                'key'      => 'per_page',
+                'value'    => '10',
+                'disabled' => true,
+            ],
+        ];
+    }
+
+
     public function get_basic_routes(): array {
         $basic_routes = [];
 
@@ -152,52 +173,58 @@ class Postman_Routes {
             $folder_items = [];
 
             // List
+            $query_params = [];
+            
+            // Add entity-specific query parameters
+            if ($entity === 'posts') {
+                $query_params[] = [
+                    'key'   => '_fields',
+                    'value' => $this->get_posts_fields_param(),
+                ];
+                $query_params[] = [
+                    'key'      => 'categories',
+                    'value'    => '1',
+                    'disabled' => true,
+                ];
+            } elseif ($entity === 'categories') {
+                $query_params[] = [
+                    'key'   => '_fields',
+                    'value' => $this->get_categories_fields_param(),
+                ];
+            } elseif (in_array($entity, ['pages'], true)) {
+                $query_params[] = [
+                    'key'   => '_fields',
+                    'value' => $this->get_fields_param(),
+                ];
+            }
+            
+            // Add pagination parameters for entities that support pagination (exclude 'settings')
+            if ($entity !== 'settings') {
+                $query_params = array_merge($query_params, $this->get_pagination_params());
+            }
+            
+            // Build raw URL
+            $raw_url = '{{baseUrl}}/wp-json/wp/v2/' . $entity;
+            if ($entity === 'posts') {
+                $raw_url = sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s&categories=1&page=1&per_page=10', $entity, $this->get_posts_fields_param());
+            } elseif ($entity === 'categories') {
+                $raw_url = sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s&page=1&per_page=10', $entity, $this->get_categories_fields_param());
+            } elseif (in_array($entity, ['pages'], true)) {
+                $raw_url = sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s&page=1&per_page=10', $entity, $this->get_fields_param());
+            } elseif ($entity !== 'settings') {
+                $raw_url = '{{baseUrl}}/wp-json/wp/v2/' . $entity . '?page=1&per_page=10';
+            }
+            
             $folder_items[] = [
                 'name'    => 'List of ' . ucfirst($plural),
                 'request' => [
                     'method'      => 'GET',
                     'header'      => $this->get_default_headers(),
                     'url'         => [
-                        'raw'   => (
-                            $entity === 'posts'
-                            ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s&categories=1', $entity, $this->get_posts_fields_param())
-                            : ($entity === 'categories'
-                            ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s', $entity, $this->get_categories_fields_param())
-                            : (in_array($entity, ['pages'], true)
-                            ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s', $entity, $this->get_fields_param())
-                            : '{{baseUrl}}/wp-json/wp/v2/' . $entity))
-                        ),
+                        'raw'   => $raw_url,
                         'host'  => ['{{baseUrl}}'],
                         'path'  => ['wp-json', 'wp', 'v2', $entity],
-                        'query' => (
-                            $entity === 'posts'
-                            ? [
-                                [
-                                    'key'   => '_fields',
-                                    'value' => $this->get_posts_fields_param(),
-                                ],
-                                [
-                                    'key'      => 'categories',
-                                    'value'    => '1',
-                                    'disabled' => true,
-                                ],
-                            ]
-                            : ($entity === 'categories'
-                            ? [
-                                [
-                                    'key'   => '_fields',
-                                    'value' => $this->get_categories_fields_param(),
-                                ],
-                            ]
-                            : (in_array($entity, ['pages'], true)
-                            ? [
-                                [
-                                    'key'   => '_fields',
-                                    'value' => $this->get_fields_param(),
-                                ],
-                            ]
-                            : []))
-                        ),
+                        'query' => $query_params,
                     ],
                     'description' => 'Get list of all ' . $plural,
                 ],
@@ -574,16 +601,18 @@ class Postman_Routes {
         }
 
         // List for Forms
+        $query_params = $this->get_pagination_params();
+        
         $folder_items[] = [
             'name'    => 'List of ' . $type_label,
             'request' => [
                 'method'      => 'GET',
                 'header'      => $this->get_default_headers(),
                 'url'         => [
-                    'raw'   => '{{baseUrl}}/wp-json/mksddn-forms-handler/v1/forms/',
+                    'raw'   => '{{baseUrl}}/wp-json/mksddn-forms-handler/v1/forms/?page=1&per_page=10',
                     'host'  => ['{{baseUrl}}'],
                     'path'  => ['wp-json', 'mksddn-forms-handler', 'v1', 'forms'],
-                    'query' => [],
+                    'query' => $query_params,
                 ],
                 'description' => 'Get list of all ' . $type_label,
             ],
@@ -868,21 +897,26 @@ class Postman_Routes {
 
     private function get_standard_custom_post_type_routes(string $post_type_name, $rest_base, string $singular_label): array
     {
+        $query_params = [
+            [
+                'key'   => '_fields',
+                'value' => $this->get_fields_param(),
+            ],
+        ];
+        
+        // Add pagination parameters
+        $query_params = array_merge($query_params, $this->get_pagination_params());
+        
         return [[
             'name'    => 'List of ' . ucfirst($post_type_name),
             'request' => [
                 'method'      => 'GET',
                 'header'      => $this->get_default_headers(),
                 'url'         => [
-                    'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s', $rest_base, $this->get_fields_param()),
+                    'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s&page=1&per_page=10', $rest_base, $this->get_fields_param()),
                     'host'  => ['{{baseUrl}}'],
                     'path'  => ['wp-json', 'wp', 'v2', $rest_base],
-                    'query' => [
-                        [
-                            'key'   => '_fields',
-                            'value' => $this->get_fields_param(),
-                        ],
-                    ],
+                    'query' => $query_params,
                 ],
                 'description' => 'Get list of all ' . ucfirst($post_type_name),
             ],
