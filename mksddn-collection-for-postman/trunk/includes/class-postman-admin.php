@@ -334,9 +334,9 @@ class Postman_Admin {
             foreach ($data['custom_post_types'] as $post_type_name => $post_type_obj) {
                 $type_label = isset($post_type_obj->labels->name) ? (string) $post_type_obj->labels->name : ucfirst((string) $post_type_name);
                 $is_selected = in_array($post_type_name, $data['selected_custom_post_types'], true);
-                $display_style = $is_selected ? '' : ' style="display:none;"';
-                echo '<li class="acf-cpt-item" data-cpt="' . esc_attr($post_type_name) . '"' . $display_style . '><label><input type="checkbox" name="acf_for_cpt_lists[]" value="' . esc_attr($post_type_name) . '"';
+                echo '<li class="acf-cpt-item" data-cpt="' . esc_attr($post_type_name) . '"' . ($is_selected ? '' : ' style="' . esc_attr('display:none;') . '"') . '><label><input type="checkbox" name="acf_for_cpt_lists[]" value="' . esc_attr($post_type_name) . '"';
                 checked(in_array($post_type_name, $data['acf_for_cpt_lists'], true), true);
+                /* translators: %s: Custom post type label */
                 echo '> ' . esc_html(sprintf(__('Add ACF fields for LIST of %s', 'mksddn-collection-for-postman'), $type_label)) . '</label></li>';
             }
         }
