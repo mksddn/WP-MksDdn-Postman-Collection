@@ -4,7 +4,7 @@ Tags: rest api, postman, collection, developer-tools
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.5
+Stable tag: 1.1.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,6 +19,7 @@ Features:
 - Basic REST endpoints: pages, posts, categories, tags, taxonomies, comments, users, settings
 - Search functionality: Posts, Pages, and All content types with customizable queries
 - Custom Post Types with full CRUD operations (List, Get by Slug/ID, Create, Update, Delete)
+- ACF fields support for lists: pages, posts, and Custom Post Types (optional per type)
 - Special handling for Forms (mksddn-forms-handler integration)
 - Options endpoints: `/wp-json/custom/v1/options/...`
 - Individual pages by slug with ACF field support
@@ -54,7 +55,7 @@ Export with specific pages:
 `wp mksddn-collection-for-postman export --file=my_collection.json --pages=home,about,contact`
 
 = Does it support ACF fields? =
-Yes. The plugin automatically includes ACF field support in requests for pages and posts. When generating requests, it adds `acf_format=standard` parameter and includes ACF fields in the `_fields` parameter.
+Yes. The plugin automatically includes ACF field support in requests for individual pages and posts. Additionally, you can optionally enable ACF fields for list endpoints (pages list, posts list, and Custom Post Types lists) through the admin interface. When generating requests, it adds `acf_format=standard` parameter and includes ACF fields in the `_fields` parameter.
 
 = Does it support file uploads in forms? =
 Yes. When forms contain file fields, the plugin automatically generates multipart/form-data requests with proper file handling. For forms without files, it uses standard JSON requests.
@@ -83,6 +84,12 @@ Note: This plugin does not send any user data to external services. The schema r
 1. Admin screen with page selection and download button.
 
 == Changelog ==
+= 1.1.0 =
+- New: Custom Post Types support with full CRUD operations (List, Get by Slug/ID, Create, Update, Delete)
+- New: Admin UI section for selecting Custom Post Types to include in collection
+- New: ACF fields support for lists of pages, posts, and Custom Post Types
+- New: Dynamic ACF checkboxes that appear/hide based on selected Custom Post Types
+
 = 1.0.5 =
 - Updated: Tested up to WordPress 6.9
 - Verified compatibility with WordPress 6.9 changes (UTF-8 modernization, REST API stability)

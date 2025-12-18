@@ -19,6 +19,8 @@
   - страницы опций (эндпоинты вида `/wp-json/custom/v1/options/...`)
   - индивидуально выбранные страницы по слагам
   - выбор категорий и автоматические запросы постов по выбранным категориям
+  - выбор Custom Post Types для включения в коллекцию
+  - опциональное включение ACF полей в запросы списков (List of pages, List of posts, List of CPT) через чекбоксы в админке
 - Автоматическое включение SEO-данных Yoast (`yoast_head_json`) в параметр `_fields` для pages и posts при активном плагине Yoast SEO
 - Поддержка многоязычности через заголовок `Accept-Language` во всех GET-запросах
 - Скачивание JSON-файла коллекции из админки.
@@ -26,8 +28,8 @@
 ### Архитектура и компоненты
 - Пакет плагина: `mksddn-postman-collection/`
   - `postman-collection.php` — точка входа плагина (инициализация, константы, автозагрузка, регистрация хуков)
-  - `includes/class-postman-admin.php` — админ-интерфейс: страница, форма выбора (страницы и категории), обработчик `admin_post_*`
-  - `includes/class-postman-generator.php` — сборка структуры коллекции и выдача JSON на скачивание (принимает выбранные страницы и категории)
+  - `includes/class-postman-admin.php` — админ-интерфейс: страница, форма выбора (страницы, категории и Custom Post Types), обработчик `admin_post_*`
+  - `includes/class-postman-generator.php` — сборка структуры коллекции и выдача JSON на скачивание (принимает выбранные страницы, категории и Custom Post Types)
   - `includes/class-postman-options.php` — извлечение и кэширование страниц опций через REST server и роуты
   - `includes/class-postman-routes.php` — генерация маршрутов для базовых сущностей, CPT, форм, индивидуальных страниц и списка постов по выбранным категориям
 
@@ -57,6 +59,20 @@
 - Все поисковые запросы используют параметр `search=example` как пример
 - Поддерживается параметр `_fields` для оптимизации ответа
 - Поиск работает через стандартный WordPress REST API endpoint `/wp-json/wp/v2/search`
+
+Примечание по пагинации:
+- Все запросы типа "List of ..." (List of Posts, List of Pages, List of any CPT и т.п.) автоматически включают параметры пагинации `page` и `per_page`
+- Параметры пагинации по умолчанию отключены (`disabled: true`) в Postman, чтобы не влиять на существующие запросы
+- Значения по умолчанию: `page=1`, `per_page=10`
+- Параметры пагинации добавляются для всех сущностей, поддерживающих пагинацию в WordPress REST API (posts, pages, categories, tags, comments, users, CPT), за исключением `settings`
+
+Примечание по ACF полям для списков:
+- На странице создания коллекции добавлены чекбоксы для опционального включения ACF полей в запросы списков:
+  - "Add ACF fields for LIST of pages" — добавляет параметры `acf_format=standard` и включает `acf` в `_fields` для запроса "List of Pages"
+  - "Add ACF fields for LIST of posts" — добавляет параметры `acf_format=standard` и включает `acf` в `_fields` для запроса "List of Posts"
+  - "Add ACF fields for LIST of [CPT name]" — для каждого доступного Custom Post Type добавляет аналогичные параметры для запроса "List of [CPT]"
+- Чекбоксы по умолчанию выключены, что соответствует текущему поведению (ACF поля добавляются только для индивидуальных запросов по слагу или ID)
+- При включении соответствующего чекбокса в запрос списка добавляются параметры `acf_format=standard` и поле `acf` включается в параметр `_fields`
 
 Примеры генерации тестовых данных для полей форм:
 - Поддерживаются типы: `text`, `email`, `password`, `tel`, `url`, `number` (учёт `min`/`max`/`step`), `date`, `time`, `datetime-local`, `textarea`, `checkbox`, `radio`, `select` (включая `multiple`), `file` (включая `multiple`).
