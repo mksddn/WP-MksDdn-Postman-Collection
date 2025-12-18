@@ -22,11 +22,11 @@ class Postman_Generator {
     }
 
 
-    public function generate_and_download(array $selected_page_slugs, array $selected_post_slugs, array $selected_custom_slugs, array $selected_options_pages, array $selected_category_slugs = []): void {
+    public function generate_and_download(array $selected_page_slugs, array $selected_post_slugs, array $selected_custom_slugs, array $selected_options_pages, array $selected_category_slugs = [], array $selected_custom_post_types = []): void {
         $post_types = get_post_types(['public' => true], 'objects');
         $custom_post_types = $this->filter_custom_post_types($post_types);
 
-        $collection = $this->build_collection($custom_post_types, $selected_page_slugs, $selected_category_slugs);
+        $collection = $this->build_collection($custom_post_types, $selected_page_slugs, $selected_category_slugs, $selected_custom_post_types);
 
         $this->download_collection($collection);
     }
@@ -36,10 +36,10 @@ class Postman_Generator {
      * Build collection and return as array without sending download headers.
      * Intended for programmatic usage (e.g., WP-CLI).
      */
-    public function generate_collection_array(array $selected_page_slugs, array $selected_category_slugs = []): array {
+    public function generate_collection_array(array $selected_page_slugs, array $selected_category_slugs = [], array $selected_custom_post_types = []): array {
         $post_types = get_post_types(['public' => true], 'objects');
         $custom_post_types = $this->filter_custom_post_types($post_types);
-        return $this->build_collection($custom_post_types, $selected_page_slugs, $selected_category_slugs);
+        return $this->build_collection($custom_post_types, $selected_page_slugs, $selected_category_slugs, $selected_custom_post_types);
     }
 
 
@@ -55,7 +55,7 @@ class Postman_Generator {
     }
 
 
-    private function build_collection(array $custom_post_types, array $selected_page_slugs, array $selected_category_slugs = []): array {
+    private function build_collection(array $custom_post_types, array $selected_page_slugs, array $selected_category_slugs = [], array $selected_custom_post_types = []): array {
         $items = [];
 
         // Basic Routes
@@ -78,8 +78,17 @@ class Postman_Generator {
             }
         }
 
-        // Custom post types
-        $custom_routes = $this->routes_handler->get_custom_post_type_routes($custom_post_types);
+        // Custom post types - filter by selected if provided
+        $filtered_custom_post_types = $custom_post_types;
+        if (!empty($selected_custom_post_types)) {
+            $filtered_custom_post_types = [];
+            foreach ($selected_custom_post_types as $selected_type) {
+                if (isset($custom_post_types[$selected_type])) {
+                    $filtered_custom_post_types[$selected_type] = $custom_post_types[$selected_type];
+                }
+            }
+        }
+        $custom_routes = $this->routes_handler->get_custom_post_type_routes($filtered_custom_post_types);
         $items = array_merge($items, $custom_routes);
 
         // Individual selected pages
