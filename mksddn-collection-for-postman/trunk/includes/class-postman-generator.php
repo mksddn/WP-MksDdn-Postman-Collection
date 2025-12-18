@@ -22,11 +22,11 @@ class Postman_Generator {
     }
 
 
-    public function generate_and_download(array $selected_page_slugs, array $selected_post_slugs, array $selected_custom_slugs, array $selected_options_pages, array $selected_category_slugs = [], array $selected_custom_post_types = []): void {
+    public function generate_and_download(array $selected_page_slugs, array $selected_post_slugs, array $selected_custom_slugs, array $selected_options_pages, array $selected_category_slugs = [], array $selected_custom_post_types = [], bool $acf_for_pages_list = false, bool $acf_for_posts_list = false, array $acf_for_cpt_lists = []): void {
         $post_types = get_post_types(['public' => true], 'objects');
         $custom_post_types = $this->filter_custom_post_types($post_types);
 
-        $collection = $this->build_collection($custom_post_types, $selected_page_slugs, $selected_category_slugs, $selected_custom_post_types);
+        $collection = $this->build_collection($custom_post_types, $selected_page_slugs, $selected_category_slugs, $selected_custom_post_types, $acf_for_pages_list, $acf_for_posts_list, $acf_for_cpt_lists);
 
         $this->download_collection($collection);
     }
@@ -55,13 +55,13 @@ class Postman_Generator {
     }
 
 
-    private function build_collection(array $custom_post_types, array $selected_page_slugs, array $selected_category_slugs = [], array $selected_custom_post_types = []): array {
+    private function build_collection(array $custom_post_types, array $selected_page_slugs, array $selected_category_slugs = [], array $selected_custom_post_types = [], bool $acf_for_pages_list = false, bool $acf_for_posts_list = false, array $acf_for_cpt_lists = []): array {
         $items = [];
 
         // Basic Routes
         $items[] = [
             'name' => 'Basic Routes',
-            'item' => $this->routes_handler->get_basic_routes(),
+            'item' => $this->routes_handler->get_basic_routes($acf_for_pages_list, $acf_for_posts_list),
         ];
 
         // Options Pages
@@ -88,7 +88,7 @@ class Postman_Generator {
                 }
             }
         }
-        $custom_routes = $this->routes_handler->get_custom_post_type_routes($filtered_custom_post_types);
+        $custom_routes = $this->routes_handler->get_custom_post_type_routes($filtered_custom_post_types, $acf_for_cpt_lists);
         $items = array_merge($items, $custom_routes);
 
         // Individual selected pages
