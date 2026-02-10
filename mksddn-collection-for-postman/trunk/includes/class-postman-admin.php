@@ -1,7 +1,12 @@
 <?php
-
 /**
  * @file: includes/class-postman-admin.php
+ */
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+/**
  * @description: Admin UI for generating and downloading Postman Collection.
  * @dependencies: Postman_Generator, Postman_Options
  * @created: 2025-08-19
@@ -77,11 +82,12 @@ class Postman_Admin {
 
 
     private function get_include_woocommerce(): bool {
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in handle_generation; used for form repopulation.
+        // phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in handle_generation before this is called.
         if (!isset($_POST['include_woocommerce'])) {
             return true;
         }
         return sanitize_key((string) $_POST['include_woocommerce']) === '1';
+        // phpcs:enable WordPress.Security.NonceVerification.Missing
     }
 
 
@@ -244,10 +250,10 @@ class Postman_Admin {
 
 
     private function render_selection_buttons(string $field_name): void {
-        $escaped = esc_js($field_name);
+        $field_js = esc_js($field_name);
         echo '<div class="postman-admin-block__actions">';
-        echo '<button type="button" class="button" onclick="selectAll(\'' . $escaped . '\')">' . esc_html__('Select All', 'mksddn-collection-for-postman') . '</button> ';
-        echo '<button type="button" class="button" onclick="deselectAll(\'' . $escaped . '\')">' . esc_html__('Deselect All', 'mksddn-collection-for-postman') . '</button>';
+        echo '<button type="button" class="button" onclick="selectAll(\'' . esc_attr($field_js) . '\')">' . esc_html__('Select All', 'mksddn-collection-for-postman') . '</button> ';
+        echo '<button type="button" class="button" onclick="deselectAll(\'' . esc_attr($field_js) . '\')">' . esc_html__('Deselect All', 'mksddn-collection-for-postman') . '</button>';
         echo '</div>';
     }
 

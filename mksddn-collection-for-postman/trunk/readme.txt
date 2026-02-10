@@ -1,6 +1,6 @@
 === MksDdn Collection for Postman ===
 Contributors: mksddn
-Tags: rest api, postman, collection, openapi, swagger, api documentation, developer-tools
+Tags: rest api, postman, collection, openapi, developer-tools
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.1
