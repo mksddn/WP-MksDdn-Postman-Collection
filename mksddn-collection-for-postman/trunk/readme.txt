@@ -17,6 +17,7 @@ The plugin provides comprehensive API testing capabilities with automatic genera
 
 Features:
 - Basic REST endpoints: pages, posts, categories, tags, taxonomies, comments, users, settings
+- WooCommerce REST API (wc/v3): products, product categories, orders with full CRUD when WooCommerce is active
 - Search functionality: Posts, Pages, and All content types with customizable queries
 - Custom Post Types with full CRUD operations (List, Get by Slug/ID, Create, Update, Delete)
 - ACF fields support for lists: pages, posts, and Custom Post Types (optional per type)
@@ -39,6 +40,9 @@ Features:
 == Frequently Asked Questions ==
 = Does it support multisite? =
 Yes. It works at the site level. Network-specific screens are not required.
+
+= Does it support WooCommerce? =
+Yes. When WooCommerce is active, the plugin adds a WooCommerce folder with products, product categories, and orders endpoints. Set collection variables wcConsumerKey and wcConsumerSecret (from WooCommerce > Settings > Advanced > REST API).
 
 = Does it require ACF? =
 No. It supports ACF fields if present for pages and posts, but it does not require ACF to work.
@@ -89,6 +93,11 @@ Note: This plugin does not send any user data to external services. The schema r
 1. Admin screen with page selection and download button.
 
 == Changelog ==
+= 1.2.1 =
+- New: WooCommerce REST API support (products, product categories, orders)
+- New: Admin checkbox to include/exclude WooCommerce routes
+- New: Basic Auth (Consumer Key/Secret) for WooCommerce endpoints in Postman and OpenAPI
+
 = 1.2.0 =
 - New: OpenAPI 3.0 export for API documentation (Swagger UI, Redoc)
 - New: Export format selection in admin (Postman / OpenAPI)

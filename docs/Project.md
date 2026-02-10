@@ -14,6 +14,7 @@
 ### Область применения
 - Генерация Postman Collection v2.1.0 по публичным REST-маршрутам WordPress, в том числе:
   - базовые сущности WP (`pages`, `posts`, `categories`, `tags`, `taxonomies`, `comments`, `users`, `settings`)
+  - WooCommerce REST API (wc/v3): `products`, `products/categories`, `orders` — при активном плагине WooCommerce
   - поиск по контенту (`search` с поддержкой фильтрации по типам)
   - пользовательские типы записей (CPT), включая специальные маршруты для `forms`
   - страницы опций (эндпоинты вида `/wp-json/custom/v1/options/...`)
@@ -41,6 +42,11 @@
  - Для каждой формы добавляются два роута:
    - GET `wp-json/mksddn-forms-handler/v1/forms/{slug}` — получение информации о форме
    - POST `wp-json/mksddn-forms-handler/v1/forms/{slug}/submit` — отправка данных формы (тело запроса заполняется автогенерируемыми примерами значений)
+
+Примечание по интеграции с WooCommerce:
+- При активном плагине WooCommerce в коллекцию добавляется папка "WooCommerce" с маршрутами: Products (List, by ID, Create, Update, Delete), Product Categories (аналогично), Orders (аналогично)
+- Аутентификация: HTTP Basic Auth (Consumer Key + Consumer Secret). Ключи создаются в WooCommerce > Settings > Advanced > REST API
+- Переменные коллекции: `wcConsumerKey`, `wcConsumerSecret`, `ProductCategoryID`, `OrderID`; `ProductID` — из CPT
 
 Примечание по интеграции с Yoast SEO:
 - Если установлен и активен плагин Yoast SEO (`wordpress-seo/wp-seo.php`), параметр `_fields` для pages и posts автоматически дополняется значением `yoast_head_json`

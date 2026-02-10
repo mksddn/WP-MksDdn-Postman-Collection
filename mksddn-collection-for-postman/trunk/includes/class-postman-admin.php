@@ -54,6 +54,7 @@ class Postman_Admin {
         $custom_post_types = $this->filter_custom_post_types($post_types);
 
         return [
+            'woocommerce_active' => $this->is_woocommerce_active(),
             'pages' => $this->get_pages(),
             'posts' => $this->get_posts(),
             'custom_post_types' => $custom_post_types,
@@ -70,7 +71,22 @@ class Postman_Admin {
             'acf_for_pages_list' => $this->get_acf_for_pages_list(),
             'acf_for_posts_list' => $this->get_acf_for_posts_list(),
             'acf_for_cpt_lists' => $this->get_acf_for_cpt_lists(),
+            'include_woocommerce' => $this->get_include_woocommerce(),
         ];
+    }
+
+
+    private function is_woocommerce_active(): bool {
+        return class_exists('WooCommerce');
+    }
+
+
+    private function get_include_woocommerce(): bool {
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in handle_generation; used for form repopulation.
+        if (!isset($_POST['include_woocommerce'])) {
+            return true;
+        }
+        return sanitize_key((string) $_POST['include_woocommerce']) === '1';
     }
 
 
@@ -246,6 +262,14 @@ class Postman_Admin {
         echo '<h3>' . esc_html__('Add requests for posts by categories:', 'mksddn-collection-for-postman') . '</h3>';
         $this->render_selection_buttons_categories();
         $this->render_categories_list($data['categories'], $data['selected_category_slugs']);
+
+        if (!empty($data['woocommerce_active'])) {
+            echo '<h3>' . esc_html__('WooCommerce REST API:', 'mksddn-collection-for-postman') . '</h3>';
+            echo '<p><input type="hidden" name="include_woocommerce" value="0"><label><input type="checkbox" name="include_woocommerce" value="1"';
+            checked($data['include_woocommerce'], true);
+            echo '> ' . esc_html__('Include WooCommerce REST API (products, categories, orders)', 'mksddn-collection-for-postman') . '</label></p>';
+            echo '<p class="description">' . esc_html__('Requires WooCommerce. Auth: Consumer Key + Secret (Settings > Advanced > REST API).', 'mksddn-collection-for-postman') . '</p>';
+        }
 
         if (!empty($data['custom_post_types'])) {
             echo '<h3>' . esc_html__('Add requests for Custom Post Types:', 'mksddn-collection-for-postman') . '</h3>';
@@ -452,6 +476,7 @@ class Postman_Admin {
             'acf_for_pages_list' => $this->get_acf_for_pages_list(),
             'acf_for_posts_list' => $this->get_acf_for_posts_list(),
             'acf_for_cpt_lists' => $this->get_acf_for_cpt_lists(),
+            'include_woocommerce' => $this->get_include_woocommerce(),
         ];
 
         $generator = new Postman_Generator();
@@ -465,6 +490,7 @@ class Postman_Admin {
             $selected_data['acf_for_pages_list'],
             $selected_data['acf_for_posts_list'],
             $selected_data['acf_for_cpt_lists'],
+            $selected_data['include_woocommerce'],
             $this->get_export_format()
         );
     }

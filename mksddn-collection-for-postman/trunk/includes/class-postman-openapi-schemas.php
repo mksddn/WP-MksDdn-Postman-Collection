@@ -223,6 +223,11 @@ class Postman_OpenAPI_Schemas {
                 'scheme'      => 'basic',
                 'description' => 'Application Passwords (WordPress 5.6+). Create in Users > Profile > Application Passwords. Use with Basic auth over HTTPS. Per https://developer.wordpress.org/rest-api/using-the-rest-api/authentication/',
             ],
+            'wcBasicAuth' => [
+                'type'        => 'http',
+                'scheme'      => 'basic',
+                'description' => 'WooCommerce REST API. Consumer Key as username, Consumer Secret as password. Create in WooCommerce > Settings > Advanced > REST API. Per https://github.com/woocommerce/woocommerce-rest-api-docs',
+            ],
         ];
     }
 

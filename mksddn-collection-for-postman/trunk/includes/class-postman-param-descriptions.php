@@ -25,11 +25,18 @@ class Postman_Param_Descriptions {
         'orderby'    => 'Field to sort by: date, title, id, slug, etc. Per WP REST API.',
         'status'     => 'Filter by post status: publish, draft, pending, private, etc.',
         'force'      => 'Bypass Trash on delete. Use force=true for permanent deletion.',
+        'after'      => 'Limit to resources created after date (ISO 8601). WooCommerce.',
+        'before'     => 'Limit to resources created before date (ISO 8601). WooCommerce.',
+        'category'   => 'Filter by product category ID. WooCommerce.',
+        'tag'        => 'Filter by product tag ID. WooCommerce.',
+        'customer'   => 'Filter orders by customer ID. WooCommerce.',
+        'product'    => 'Filter orders by product ID. WooCommerce.',
     ];
 
     private const HEADERS = [
         'Accept-Language' => 'Preferred language (RFC 5646). For multilingual sites (e.g. Polylang).',
         'X-WP-Nonce'      => 'Nonce for same-origin auth. Get via wp_create_nonce(\'wp_rest\'). Required for POST/PUT/PATCH/DELETE when logged in.',
+        'Authorization'   => 'Basic Auth for WooCommerce API. Use consumer_key:consumer_secret. Create keys in WooCommerce > Settings > Advanced > REST API.',
     ];
 
     private const REQUEST_BODY = [

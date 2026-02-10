@@ -23,6 +23,16 @@ class Postman_Routes {
 
 
     /**
+     * Check if WooCommerce plugin is active.
+     *
+     * @return bool
+     */
+    private function is_woocommerce_active(): bool {
+        return class_exists('WooCommerce');
+    }
+
+
+    /**
      * Check if Polylang plugin is active.
      *
      * @return bool
@@ -1221,6 +1231,397 @@ class Postman_Routes {
 	}
 
 
+    /**
+     * Build WooCommerce REST API routes (products, categories, orders).
+     * Requires WooCommerce plugin. Uses wc/v3 namespace and Basic Auth.
+     *
+     * @return array Folder structure or empty if WooCommerce inactive
+     */
+    public function get_woocommerce_routes(): array {
+        if (!$this->is_woocommerce_active()) {
+            return [];
+        }
+
+        $wc_base = 'wp-json/wc/v3';
+        $wc_auth = [
+            'type'  => 'basic',
+            'basic' => [
+                ['key' => 'username', 'value' => '{{wcConsumerKey}}', 'type' => 'string'],
+                ['key' => 'password', 'value' => '{{wcConsumerSecret}}', 'type' => 'string'],
+            ],
+        ];
+
+        $wc_pagination = [
+            ['key' => 'page', 'value' => '1', 'disabled' => true],
+            ['key' => 'per_page', 'value' => '10', 'disabled' => true],
+        ];
+        Postman_Param_Descriptions::enrich_query_params($wc_pagination);
+
+        $products_items = $this->build_wc_products_routes($wc_base, $wc_pagination);
+        $categories_items = $this->build_wc_product_categories_routes($wc_base, $wc_pagination);
+        $orders_items = $this->build_wc_orders_routes($wc_base, $wc_pagination);
+
+        return [
+            [
+                'name' => 'WooCommerce',
+                'auth' => $wc_auth,
+                'item' => [
+                    ['name' => 'Products', 'item' => $products_items],
+                    ['name' => 'Product Categories', 'item' => $categories_items],
+                    ['name' => 'Orders', 'item' => $orders_items],
+                ],
+            ],
+        ];
+    }
+
+
+    /**
+     * @param string $wc_base
+     * @param array  $wc_pagination
+     * @return array
+     */
+    private function build_wc_products_routes(string $wc_base, array $wc_pagination): array {
+        $query_list = array_merge(
+            $wc_pagination,
+            [
+                ['key' => 'context', 'value' => 'view', 'disabled' => true],
+                ['key' => 'search', 'value' => '', 'disabled' => true],
+                ['key' => 'after', 'value' => '', 'disabled' => true],
+                ['key' => 'before', 'value' => '', 'disabled' => true],
+                ['key' => 'exclude', 'value' => '', 'disabled' => true],
+                ['key' => 'include', 'value' => '', 'disabled' => true],
+                ['key' => 'slug', 'value' => '', 'disabled' => true],
+                ['key' => 'status', 'value' => 'publish', 'disabled' => true],
+                ['key' => 'type', 'value' => 'simple', 'disabled' => true],
+                ['key' => 'category', 'value' => '', 'disabled' => true],
+                ['key' => 'tag', 'value' => '', 'disabled' => true],
+                ['key' => 'orderby', 'value' => 'date', 'disabled' => true],
+                ['key' => 'order', 'value' => 'desc', 'disabled' => true],
+            ]
+        );
+        Postman_Param_Descriptions::enrich_query_params($query_list);
+
+        $body_create = [
+            'name'         => 'Sample Product',
+            'type'         => 'simple',
+            'regular_price'=> '29.99',
+            'description'  => 'Product description.',
+            'short_description' => 'Short description.',
+            'status'       => 'draft',
+        ];
+
+        return [
+            [
+                'name'    => 'List Products',
+                'request' => [
+                    'method'      => 'GET',
+                    'header'      => $this->get_default_headers(),
+                    'url'         => [
+                        'raw'   => '{{baseUrl}}/' . $wc_base . '/products?page=1&per_page=10',
+                        'host'  => ['{{baseUrl}}'],
+                        'path'  => array_merge(['wp-json', 'wc', 'v3'], ['products']),
+                        'query' => $query_list,
+                    ],
+                    'description' => 'List all products. WooCommerce REST API.',
+                ],
+            ],
+            [
+                'name'    => 'Product by ID',
+                'request' => [
+                    'method'      => 'GET',
+                    'header'      => $this->get_default_headers(),
+                    'url'         => [
+                        'raw'   => '{{baseUrl}}/' . $wc_base . '/products/{{ProductID}}',
+                        'host'  => ['{{baseUrl}}'],
+                        'path'  => array_merge(['wp-json', 'wc', 'v3'], ['products', '{{ProductID}}']),
+                        'query' => [['key' => 'context', 'value' => 'view', 'disabled' => true]],
+                    ],
+                    'description' => 'Get product by ID.',
+                ],
+            ],
+            [
+                'name'    => 'Create Product',
+                'request' => [
+                    'method'      => 'POST',
+                    'header'      => [['key' => 'Content-Type', 'value' => 'application/json']],
+                    'body'        => [
+                        'mode' => 'raw',
+                        'raw'  => wp_json_encode($body_create, JSON_PRETTY_PRINT),
+                    ],
+                    'url'         => [
+                        'raw'  => '{{baseUrl}}/' . $wc_base . '/products',
+                        'host' => ['{{baseUrl}}'],
+                        'path' => array_merge(['wp-json', 'wc', 'v3'], ['products']),
+                    ],
+                    'description' => 'Create new product.',
+                ],
+            ],
+            [
+                'name'    => 'Update Product',
+                'request' => [
+                    'method'      => 'PUT',
+                    'header'      => [['key' => 'Content-Type', 'value' => 'application/json']],
+                    'body'        => [
+                        'mode' => 'raw',
+                        'raw'  => wp_json_encode([
+                            'name'          => 'Updated Product Name',
+                            'regular_price' => '39.99',
+                        ], JSON_PRETTY_PRINT),
+                    ],
+                    'url'         => [
+                        'raw'  => '{{baseUrl}}/' . $wc_base . '/products/{{ProductID}}',
+                        'host' => ['{{baseUrl}}'],
+                        'path' => array_merge(['wp-json', 'wc', 'v3'], ['products', '{{ProductID}}']),
+                    ],
+                    'description' => 'Update product by ID.',
+                ],
+            ],
+            [
+                'name'    => 'Delete Product',
+                'request' => [
+                    'method'      => 'DELETE',
+                    'header'      => [],
+                    'url'         => [
+                        'raw'   => '{{baseUrl}}/' . $wc_base . '/products/{{ProductID}}?force=true',
+                        'host'  => ['{{baseUrl}}'],
+                        'path'  => array_merge(['wp-json', 'wc', 'v3'], ['products', '{{ProductID}}']),
+                        'query' => [['key' => 'force', 'value' => 'true', 'disabled' => true]],
+                    ],
+                    'description' => 'Delete product. Use force=true for permanent delete.',
+                ],
+            ],
+        ];
+    }
+
+
+    /**
+     * @param string $wc_base
+     * @param array  $wc_pagination
+     * @return array
+     */
+    private function build_wc_product_categories_routes(string $wc_base, array $wc_pagination): array {
+        $query_list = array_merge(
+            $wc_pagination,
+            [
+                ['key' => 'context', 'value' => 'view', 'disabled' => true],
+                ['key' => 'search', 'value' => '', 'disabled' => true],
+                ['key' => 'exclude', 'value' => '', 'disabled' => true],
+                ['key' => 'include', 'value' => '', 'disabled' => true],
+                ['key' => 'slug', 'value' => '', 'disabled' => true],
+                ['key' => 'parent', 'value' => '0', 'disabled' => true],
+                ['key' => 'orderby', 'value' => 'name', 'disabled' => true],
+                ['key' => 'order', 'value' => 'asc', 'disabled' => true],
+            ]
+        );
+        Postman_Param_Descriptions::enrich_query_params($query_list);
+
+        $body_create = [
+            'name'        => 'Sample Category',
+            'slug'        => 'sample-category',
+            'description' => 'Category description.',
+            'parent'      => 0,
+        ];
+
+        return [
+            [
+                'name'    => 'List Product Categories',
+                'request' => [
+                    'method'      => 'GET',
+                    'header'      => $this->get_default_headers(),
+                    'url'         => [
+                        'raw'   => '{{baseUrl}}/' . $wc_base . '/products/categories?page=1&per_page=10',
+                        'host'  => ['{{baseUrl}}'],
+                        'path'  => array_merge(['wp-json', 'wc', 'v3'], ['products', 'categories']),
+                        'query' => $query_list,
+                    ],
+                    'description' => 'List all product categories.',
+                ],
+            ],
+            [
+                'name'    => 'Product Category by ID',
+                'request' => [
+                    'method'      => 'GET',
+                    'header'      => $this->get_default_headers(),
+                    'url'         => [
+                        'raw'  => '{{baseUrl}}/' . $wc_base . '/products/categories/{{ProductCategoryID}}',
+                        'host' => ['{{baseUrl}}'],
+                        'path' => array_merge(['wp-json', 'wc', 'v3'], ['products', 'categories', '{{ProductCategoryID}}']),
+                        'query' => [['key' => 'context', 'value' => 'view', 'disabled' => true]],
+                    ],
+                    'description' => 'Get product category by ID.',
+                ],
+            ],
+            [
+                'name'    => 'Create Product Category',
+                'request' => [
+                    'method'      => 'POST',
+                    'header'      => [['key' => 'Content-Type', 'value' => 'application/json']],
+                    'body'        => [
+                        'mode' => 'raw',
+                        'raw'  => wp_json_encode($body_create, JSON_PRETTY_PRINT),
+                    ],
+                    'url'         => [
+                        'raw'  => '{{baseUrl}}/' . $wc_base . '/products/categories',
+                        'host' => ['{{baseUrl}}'],
+                        'path' => array_merge(['wp-json', 'wc', 'v3'], ['products', 'categories']),
+                    ],
+                    'description' => 'Create new product category.',
+                ],
+            ],
+            [
+                'name'    => 'Update Product Category',
+                'request' => [
+                    'method'      => 'PUT',
+                    'header'      => [['key' => 'Content-Type', 'value' => 'application/json']],
+                    'body'        => [
+                        'mode' => 'raw',
+                        'raw'  => wp_json_encode(['name' => 'Updated Category', 'slug' => 'updated-category'], JSON_PRETTY_PRINT),
+                    ],
+                    'url'         => [
+                        'raw'  => '{{baseUrl}}/' . $wc_base . '/products/categories/{{ProductCategoryID}}',
+                        'host' => ['{{baseUrl}}'],
+                        'path' => array_merge(['wp-json', 'wc', 'v3'], ['products', 'categories', '{{ProductCategoryID}}']),
+                    ],
+                    'description' => 'Update product category by ID.',
+                ],
+            ],
+            [
+                'name'    => 'Delete Product Category',
+                'request' => [
+                    'method'      => 'DELETE',
+                    'header'      => [],
+                    'url'         => [
+                        'raw'   => '{{baseUrl}}/' . $wc_base . '/products/categories/{{ProductCategoryID}}?force=true',
+                        'host'  => ['{{baseUrl}}'],
+                        'path'  => array_merge(['wp-json', 'wc', 'v3'], ['products', 'categories', '{{ProductCategoryID}}']),
+                        'query' => [['key' => 'force', 'value' => 'true', 'disabled' => true]],
+                    ],
+                    'description' => 'Delete product category. Use force=true for permanent delete.',
+                ],
+            ],
+        ];
+    }
+
+
+    /**
+     * @param string $wc_base
+     * @param array  $wc_pagination
+     * @return array
+     */
+    private function build_wc_orders_routes(string $wc_base, array $wc_pagination): array {
+        $query_list = array_merge(
+            $wc_pagination,
+            [
+                ['key' => 'context', 'value' => 'view', 'disabled' => true],
+                ['key' => 'search', 'value' => '', 'disabled' => true],
+                ['key' => 'after', 'value' => '', 'disabled' => true],
+                ['key' => 'before', 'value' => '', 'disabled' => true],
+                ['key' => 'status', 'value' => 'any', 'disabled' => true],
+                ['key' => 'customer', 'value' => '', 'disabled' => true],
+                ['key' => 'product', 'value' => '', 'disabled' => true],
+                ['key' => 'orderby', 'value' => 'date', 'disabled' => true],
+                ['key' => 'order', 'value' => 'desc', 'disabled' => true],
+            ]
+        );
+        Postman_Param_Descriptions::enrich_query_params($query_list);
+
+        $body_create = [
+            'payment_method' => 'bacs',
+            'billing'       => [
+                'first_name' => 'John',
+                'last_name'  => 'Doe',
+                'address_1'  => '123 Main St',
+                'city'       => 'Anytown',
+                'postcode'   => '12345',
+                'country'    => 'US',
+                'email'      => 'john@example.com',
+            ],
+            'line_items' => [
+                ['product_id' => 1, 'quantity' => 1],
+            ],
+        ];
+
+        return [
+            [
+                'name'    => 'List Orders',
+                'request' => [
+                    'method'      => 'GET',
+                    'header'      => $this->get_default_headers(),
+                    'url'         => [
+                        'raw'   => '{{baseUrl}}/' . $wc_base . '/orders?page=1&per_page=10',
+                        'host'  => ['{{baseUrl}}'],
+                        'path'  => array_merge(['wp-json', 'wc', 'v3'], ['orders']),
+                        'query' => $query_list,
+                    ],
+                    'description' => 'List all orders.',
+                ],
+            ],
+            [
+                'name'    => 'Order by ID',
+                'request' => [
+                    'method'      => 'GET',
+                    'header'      => $this->get_default_headers(),
+                    'url'         => [
+                        'raw'  => '{{baseUrl}}/' . $wc_base . '/orders/{{OrderID}}',
+                        'host' => ['{{baseUrl}}'],
+                        'path' => array_merge(['wp-json', 'wc', 'v3'], ['orders', '{{OrderID}}']),
+                        'query' => [['key' => 'context', 'value' => 'view', 'disabled' => true]],
+                    ],
+                    'description' => 'Get order by ID.',
+                ],
+            ],
+            [
+                'name'    => 'Create Order',
+                'request' => [
+                    'method'      => 'POST',
+                    'header'      => [['key' => 'Content-Type', 'value' => 'application/json']],
+                    'body'        => [
+                        'mode' => 'raw',
+                        'raw'  => wp_json_encode($body_create, JSON_PRETTY_PRINT),
+                    ],
+                    'url'         => [
+                        'raw'  => '{{baseUrl}}/' . $wc_base . '/orders',
+                        'host' => ['{{baseUrl}}'],
+                        'path' => array_merge(['wp-json', 'wc', 'v3'], ['orders']),
+                    ],
+                    'description' => 'Create new order.',
+                ],
+            ],
+            [
+                'name'    => 'Update Order',
+                'request' => [
+                    'method'      => 'PUT',
+                    'header'      => [['key' => 'Content-Type', 'value' => 'application/json']],
+                    'body'        => [
+                        'mode' => 'raw',
+                        'raw'  => wp_json_encode(['status' => 'processing'], JSON_PRETTY_PRINT),
+                    ],
+                    'url'         => [
+                        'raw'  => '{{baseUrl}}/' . $wc_base . '/orders/{{OrderID}}',
+                        'host' => ['{{baseUrl}}'],
+                        'path' => array_merge(['wp-json', 'wc', 'v3'], ['orders', '{{OrderID}}']),
+                    ],
+                    'description' => 'Update order by ID.',
+                ],
+            ],
+            [
+                'name'    => 'Delete Order',
+                'request' => [
+                    'method'      => 'DELETE',
+                    'header'      => [],
+                    'url'         => [
+                        'raw'   => '{{baseUrl}}/' . $wc_base . '/orders/{{OrderID}}?force=true',
+                        'host'  => ['{{baseUrl}}'],
+                        'path'  => array_merge(['wp-json', 'wc', 'v3'], ['orders', '{{OrderID}}']),
+                        'query' => [['key' => 'force', 'value' => 'true', 'disabled' => true]],
+                    ],
+                    'description' => 'Delete order. Use force=true for permanent delete.',
+                ],
+            ],
+        ];
+    }
+
+
     public function get_variables(array $custom_post_types): array {
         $variables = [
             [
@@ -1260,6 +1661,13 @@ class Postman_Routes {
                 'value' => '1',
             ],
         ];
+
+        if ($this->is_woocommerce_active()) {
+            $variables[] = ['key' => 'wcConsumerKey', 'value' => ''];
+            $variables[] = ['key' => 'wcConsumerSecret', 'value' => ''];
+            $variables[] = ['key' => 'ProductCategoryID', 'value' => '1'];
+            $variables[] = ['key' => 'OrderID', 'value' => '1'];
+        }
 
         // Add variables for custom post types
         foreach ($custom_post_types as $post_type_name => $post_type_obj) {

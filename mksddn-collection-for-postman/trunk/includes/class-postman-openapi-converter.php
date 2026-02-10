@@ -204,7 +204,10 @@ class Postman_OpenAPI_Converter {
             $operation['responses']['200']['headers'] = $this->get_pagination_response_headers();
         }
 
-        if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+        $is_wc_path = str_contains($path, '/wc/');
+        if ($is_wc_path) {
+            $operation['security'] = [['wcBasicAuth' => []]];
+        } elseif (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
             $operation['security'] = [
                 ['cookieAuth' => []],
                 ['nonceAuth' => []],
