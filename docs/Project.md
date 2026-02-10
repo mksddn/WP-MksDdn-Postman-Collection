@@ -76,13 +76,9 @@
 - Значения по умолчанию: `page=1`, `per_page=10`
 - Параметры пагинации добавляются для всех сущностей, поддерживающих пагинацию в WordPress REST API (posts, pages, categories, tags, comments, users, CPT), за исключением `settings`
 
-Примечание по ACF полям для списков:
-- На странице создания коллекции добавлены чекбоксы для опционального включения ACF полей в запросы списков:
-  - "Add ACF fields for LIST of pages" — добавляет параметры `acf_format=standard` и включает `acf` в `_fields` для запроса "List of Pages"
-  - "Add ACF fields for LIST of posts" — добавляет параметры `acf_format=standard` и включает `acf` в `_fields` для запроса "List of Posts"
-  - "Add ACF fields for LIST of [CPT name]" — для каждого доступного Custom Post Type добавляет аналогичные параметры для запроса "List of [CPT]"
-- Чекбоксы по умолчанию выключены, что соответствует текущему поведению (ACF поля добавляются только для индивидуальных запросов по слагу или ID)
-- При включении соответствующего чекбокса в запрос списка добавляются параметры `acf_format=standard` и поле `acf` включается в параметр `_fields`
+Примечание по ACF/SCF полям:
+- Если установлен плагин ACF (Advanced Custom Fields) или SCF (Smart Custom Fields), параметры `acf_format=standard` и поле `acf` в `_fields` автоматически включаются для всех типов записей (pages, posts, CPT) — для списков и для одиночных записей по slug/ID
+- Если плагин не установлен, ACF-поля в ответах не добавляются
 
 Примеры генерации тестовых данных для полей форм:
 - Поддерживаются типы: `text`, `email`, `password`, `tel`, `url`, `number` (учёт `min`/`max`/`step`), `date`, `time`, `datetime-local`, `textarea`, `checkbox`, `radio`, `select` (включая `multiple`), `file` (включая `multiple`).

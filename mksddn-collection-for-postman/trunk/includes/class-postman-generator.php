@@ -43,7 +43,17 @@ class Postman_Generator {
     public function generate_collection_array(array $selected_page_slugs, array $selected_category_slugs = [], array $selected_custom_post_types = []): array {
         $post_types = get_post_types(['public' => true], 'objects');
         $custom_post_types = $this->filter_custom_post_types($post_types);
-        return $this->build_collection($custom_post_types, $selected_page_slugs, $selected_category_slugs, $selected_custom_post_types);
+        $acf_active = Postman_Routes::is_acf_or_scf_active();
+        return $this->build_collection(
+            $custom_post_types,
+            $selected_page_slugs,
+            $selected_category_slugs,
+            $selected_custom_post_types,
+            $acf_active,
+            $acf_active,
+            $acf_active ? $selected_custom_post_types : [],
+            true
+        );
     }
 
 

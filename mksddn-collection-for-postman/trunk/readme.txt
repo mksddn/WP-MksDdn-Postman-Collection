@@ -20,7 +20,7 @@ Features:
 - WooCommerce REST API (wc/v3): products, product categories, orders with full CRUD when WooCommerce is active
 - Search functionality: Posts, Pages, and All content types with customizable queries
 - Custom Post Types with full CRUD operations (List, Get by Slug/ID, Create, Update, Delete)
-- ACF fields support for lists: pages, posts, and Custom Post Types (optional per type)
+- ACF/SCF fields: auto-included for all post types when ACF or Smart Custom Fields plugin is active
 - Special handling for Forms (mksddn-forms-handler integration)
 - Options endpoints: `/wp-json/custom/v1/options/...`
 - Individual pages by slug with ACF field support
@@ -59,7 +59,7 @@ OpenAPI export:
 `wp mksddn-collection-for-postman export-openapi --pages=home,about`
 
 = Does it support ACF fields? =
-Yes. The plugin automatically includes ACF field support in requests for individual pages and posts. Additionally, you can optionally enable ACF fields for list endpoints (pages list, posts list, and Custom Post Types lists) through the admin interface. When generating requests, it adds `acf_format=standard` parameter and includes ACF fields in the `_fields` parameter.
+Yes. When ACF (Advanced Custom Fields) or SCF (Smart Custom Fields) plugin is active, ACF fields are automatically included for all post types (pages, posts, CPT) in both list and single-item requests. When the plugin is not installed, ACF fields are omitted from the response.
 
 = Does it support file uploads in forms? =
 Yes. When forms contain file fields, the plugin automatically generates multipart/form-data requests with proper file handling. For forms without files, it uses standard JSON requests.
@@ -101,6 +101,7 @@ Note: This plugin does not send any user data to external services. The schema r
 = 1.2.0 =
 - New: OpenAPI 3.0 export for API documentation (Swagger UI, Redoc)
 - New: Export format selection in admin (Postman / OpenAPI)
+- Changed: ACF/SCF fields now auto-included for all post types when plugin is active; removed admin checkboxes
 - New: WP-CLI command `export-openapi` for OpenAPI spec generation
 - New: Filter `mksddn_postman_openapi_spec` for OpenAPI customization
 - New: Filter `mksddn_postman_openapi_filename` for OpenAPI filename
