@@ -44,6 +44,27 @@ class Postman_Routes {
 
 
     /**
+     * Filter public post types to exclude core types and product when WooCommerce is active.
+     *
+     * @param array $post_types Array of WP_Post_Type objects keyed by name.
+     * @return array Filtered custom post types.
+     */
+    public static function filter_custom_post_types(array $post_types): array {
+        $exclude = ['page', 'post', 'attachment'];
+        if (class_exists('WooCommerce')) {
+            $exclude[] = 'product';
+        }
+        $custom_post_types = [];
+        foreach ($post_types as $post_type) {
+            if (!in_array($post_type->name, $exclude, true)) {
+                $custom_post_types[$post_type->name] = $post_type;
+            }
+        }
+        return $custom_post_types;
+    }
+
+
+    /**
      * Check if Polylang plugin is active.
      *
      * @return bool
@@ -729,11 +750,14 @@ class Postman_Routes {
 
         // Add ALL Forms (not just selected ones)
         $forms = get_posts([
-            'post_type'      => 'mksddn_fh_forms',
-            'posts_per_page' => -1,
-            'orderby'        => 'title',
-            'order'          => 'ASC',
-            'post_status'    => 'publish',
+            'post_type'              => 'mksddn_fh_forms',
+            'posts_per_page'         => -1,
+            'orderby'                => 'title',
+            'order'                  => 'ASC',
+            'post_status'            => 'publish',
+            'no_found_rows'          => true,
+            'update_post_meta_cache' => false,
+            'update_post_term_cache' => false,
         ]);
 
         foreach ($forms as $form) {

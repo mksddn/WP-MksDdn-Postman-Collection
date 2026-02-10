@@ -172,7 +172,7 @@ class Postman_OpenAPI_Converter {
             return;
         }
 
-        $path = $this->build_openapi_path($url, $base_url);
+        $path = $this->build_openapi_path($url);
         if ($path === null) {
             return;
         }
@@ -243,7 +243,7 @@ class Postman_OpenAPI_Converter {
      * Build OpenAPI path from Postman URL object.
      * Converts {{baseUrl}}/wp-json/wp/v2/posts/{{PostID}} to /wp-json/wp/v2/posts/{postId}
      */
-    private function build_openapi_path(array $url, string $base_url): ?string {
+    private function build_openapi_path(array $url): ?string {
         $path_parts = $url['path'] ?? [];
         if (!is_array($path_parts)) {
             return null;
@@ -718,6 +718,8 @@ class Postman_OpenAPI_Converter {
             'settings' => 'setting',
             'media' => 'media',
             'taxonomies' => 'taxonomy',
+            'products' => 'product',
+            'orders' => 'order',
         ];
         
         if (isset($irregular[$entity])) {

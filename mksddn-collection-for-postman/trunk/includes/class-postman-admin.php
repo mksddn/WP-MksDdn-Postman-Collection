@@ -51,7 +51,7 @@ class Postman_Admin {
 
     private function get_page_data(): array {
         $post_types = get_post_types(['public' => true], 'objects');
-        $custom_post_types = $this->filter_custom_post_types($post_types);
+        $custom_post_types = Postman_Routes::filter_custom_post_types($post_types);
 
         return [
             'woocommerce_active' => $this->is_woocommerce_active(),
@@ -84,22 +84,6 @@ class Postman_Admin {
             return true;
         }
         return sanitize_key((string) $_POST['include_woocommerce']) === '1';
-    }
-
-
-    private function filter_custom_post_types(array $post_types): array {
-        $exclude = ['page', 'post', 'attachment'];
-        if ($this->is_woocommerce_active()) {
-            $exclude[] = 'product';
-        }
-        $custom_post_types = [];
-        foreach ($post_types as $post_type) {
-            if (!in_array($post_type->name, $exclude, true)) {
-                $custom_post_types[$post_type->name] = $post_type;
-            }
-        }
-
-        return $custom_post_types;
     }
 
 

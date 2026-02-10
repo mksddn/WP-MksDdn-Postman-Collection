@@ -24,7 +24,7 @@ class Postman_Generator {
 
     public function generate_and_download(array $selected_page_slugs, array $selected_post_slugs, array $selected_custom_slugs, array $selected_options_pages, array $selected_category_slugs = [], array $selected_custom_post_types = [], bool $acf_for_pages_list = false, bool $acf_for_posts_list = false, array $acf_for_cpt_lists = [], bool $include_woocommerce = true, string $format = 'postman'): void {
         $post_types = get_post_types(['public' => true], 'objects');
-        $custom_post_types = $this->filter_custom_post_types($post_types);
+        $custom_post_types = Postman_Routes::filter_custom_post_types($post_types);
 
         $collection = $this->build_collection($custom_post_types, $selected_page_slugs, $selected_category_slugs, $selected_custom_post_types, $acf_for_pages_list, $acf_for_posts_list, $acf_for_cpt_lists, $include_woocommerce);
 
@@ -40,9 +40,9 @@ class Postman_Generator {
      * Build collection and return as array without sending download headers.
      * Intended for programmatic usage (e.g., WP-CLI).
      */
-    public function generate_collection_array(array $selected_page_slugs, array $selected_category_slugs = [], array $selected_custom_post_types = []): array {
+    public function generate_collection_array(array $selected_page_slugs, array $selected_category_slugs = [], array $selected_custom_post_types = [], bool $include_woocommerce = true): array {
         $post_types = get_post_types(['public' => true], 'objects');
-        $custom_post_types = $this->filter_custom_post_types($post_types);
+        $custom_post_types = Postman_Routes::filter_custom_post_types($post_types);
         $acf_active = Postman_Routes::is_acf_or_scf_active();
         return $this->build_collection(
             $custom_post_types,
@@ -52,24 +52,8 @@ class Postman_Generator {
             $acf_active,
             $acf_active,
             $acf_active ? $selected_custom_post_types : [],
-            true
+            $include_woocommerce
         );
-    }
-
-
-    private function filter_custom_post_types(array $post_types): array {
-        $exclude = ['page', 'post', 'attachment'];
-        if (class_exists('WooCommerce')) {
-            $exclude[] = 'product';
-        }
-        $custom_post_types = [];
-        foreach ($post_types as $post_type) {
-            if (!in_array($post_type->name, $exclude, true)) {
-                $custom_post_types[$post_type->name] = $post_type;
-            }
-        }
-
-        return $custom_post_types;
     }
 
 
@@ -158,6 +142,10 @@ class Postman_Generator {
     private function download_collection(array $collection): void {
         $json = wp_json_encode($collection, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
+        if ($json === false) {
+            wp_die(esc_html__('Failed to generate collection.', 'mksddn-collection-for-postman'));
+        }
+
         /**
          * Filter the exported filename for the collection download.
          *
@@ -171,7 +159,7 @@ class Postman_Generator {
         header('Content-Length: ' . strlen($json));
 
         // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Output is a JSON string for download.
-        echo wp_json_encode($collection, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        echo $json;
         exit;
     }
 
