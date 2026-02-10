@@ -1,0 +1,82 @@
+/**
+ * @file: assets/css/admin.css
+ * @description: Unified block styles for Postman Collection admin export page.
+ * @dependencies: class-postman-admin.php
+ * @created: 2025-02-10
+ */
+
+/* Block wrapper - use for each section on export page */
+.postman-admin-block {
+	margin-bottom: 24px;
+	padding: 16px;
+	border: 1px solid #c3c4c7;
+	background: #fff;
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.postman-admin-block__title {
+	margin: 0 0 12px 0;
+	padding: 0;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.postman-admin-block__actions {
+	margin-bottom: 12px;
+}
+
+.postman-admin-block__content {
+	margin-bottom: 0;
+}
+
+.postman-admin-block__content--scrollable {
+	max-height: 200px;
+	overflow: auto;
+	padding: 10px;
+	border: 1px solid #c3c4c7;
+	background: #f6f7f7;
+}
+
+.postman-admin-block__content--scrollable ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.postman-admin-block__content--scrollable li {
+	margin: 4px 0;
+	padding: 2px 0;
+}
+
+.postman-admin-block__content--scrollable li label {
+	display: block;
+	cursor: pointer;
+}
+
+.postman-admin-block__content--scrollable .postman-admin-block__slug {
+	color: #646970;
+}
+
+.postman-admin-block__content--options {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.postman-admin-block__content--options label {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	cursor: pointer;
+}
+
+.postman-admin-block__description {
+	margin: 12px 0 0 0;
+	padding: 0;
+	font-size: 13px;
+	color: #646970;
+}
+
+.postman-admin-submit {
+	margin-top: 20px;
+}

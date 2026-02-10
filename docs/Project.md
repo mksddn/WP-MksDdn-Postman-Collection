@@ -30,6 +30,7 @@
 - Пакет плагина: `mksddn-postman-collection/`
   - `postman-collection.php` — точка входа плагина (инициализация, константы, автозагрузка, регистрация хуков)
   - `includes/class-postman-admin.php` — админ-интерфейс: страница, форма выбора (страницы, категории и Custom Post Types), выбор формата экспорта (Postman/OpenAPI), обработчик `admin_post_*`
+  - `assets/css/admin.css` — унифицированные стили блоков страницы экспорта. Структура блока: `postman-admin-block` (обёртка), `postman-admin-block__title`, `postman-admin-block__actions` (кнопки), `postman-admin-block__content` (варианты: `--scrollable` для списков, `--options` для чекбоксов/радио), `postman-admin-block__description`. Новый блок: `render_block_start()` → контент → `render_block_end()`.
   - `includes/class-postman-generator.php` — сборка структуры коллекции, выдача Postman JSON или OpenAPI 3.0 на скачивание
   - `includes/class-postman-openapi-converter.php` — конвертация Postman Collection в OpenAPI 3.0; параметры, пагинация (X-WP-Total, X-WP-TotalPages), auth; ссылки на https://developer.wordpress.org/rest-api/
   - `includes/class-postman-openapi-schemas.php` — OpenAPI schemas для WP сущностей (Post, Page, Term, User, Comment, Error) с ссылками на Reference; security schemes по https://developer.wordpress.org/rest-api/using-the-rest-api/authentication/

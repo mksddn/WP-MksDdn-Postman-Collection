@@ -221,68 +221,81 @@ class Postman_Admin {
         wp_nonce_field(self::NONCE_ACTION);
         echo '<input type="hidden" name="action" value="generate_postman_collection">';
 
-        echo '<h3>' . esc_html__('Add individual requests for pages:', 'mksddn-collection-for-postman') . '</h3>';
-        $this->render_selection_buttons();
+        $this->render_block_start(__('Add individual requests for pages:', 'mksddn-collection-for-postman'));
+        $this->render_selection_buttons('custom_page_slugs');
         $this->render_pages_list($data['pages'], $data['selected_page_slugs']);
+        $this->render_block_end();
 
-        echo '<h3>' . esc_html__('Add requests for posts by categories:', 'mksddn-collection-for-postman') . '</h3>';
-        $this->render_selection_buttons_categories();
+        $this->render_block_start(__('Add requests for posts by categories:', 'mksddn-collection-for-postman'));
+        $this->render_selection_buttons('custom_category_slugs');
         $this->render_categories_list($data['categories'], $data['selected_category_slugs']);
+        $this->render_block_end();
 
         if (!empty($data['woocommerce_active'])) {
-            echo '<h3>' . esc_html__('WooCommerce REST API:', 'mksddn-collection-for-postman') . '</h3>';
-            echo '<p><input type="hidden" name="include_woocommerce" value="0"><label><input type="checkbox" name="include_woocommerce" value="1"';
+            $this->render_block_start(__('WooCommerce REST API:', 'mksddn-collection-for-postman'));
+            echo '<div class="postman-admin-block__content postman-admin-block__content--options">';
+            echo '<input type="hidden" name="include_woocommerce" value="0">';
+            echo '<label><input type="checkbox" name="include_woocommerce" value="1"';
             checked($data['include_woocommerce'], true);
-            echo '> ' . esc_html__('Include WooCommerce REST API (products, categories, orders)', 'mksddn-collection-for-postman') . '</label></p>';
-            echo '<p class="description">' . esc_html__('Requires WooCommerce. Auth: Consumer Key + Secret (Settings > Advanced > REST API).', 'mksddn-collection-for-postman') . '</p>';
+            echo '> ' . esc_html__('Include WooCommerce REST API (products, categories, orders)', 'mksddn-collection-for-postman') . '</label>';
+            echo '</div>';
+            echo '<p class="postman-admin-block__description">' . esc_html__('Requires WooCommerce. Auth: Consumer Key + Secret (Settings > Advanced > REST API).', 'mksddn-collection-for-postman') . '</p>';
+            $this->render_block_end();
         }
 
         if (!empty($data['custom_post_types'])) {
-            echo '<h3>' . esc_html__('Add requests for Custom Post Types:', 'mksddn-collection-for-postman') . '</h3>';
-            $this->render_selection_buttons_custom_post_types();
+            $this->render_block_start(__('Add requests for Custom Post Types:', 'mksddn-collection-for-postman'));
+            $this->render_selection_buttons('custom_post_types');
             $this->render_custom_post_types_list($data['custom_post_types'], $data['selected_custom_post_types']);
+            $this->render_block_end();
         }
 
-        echo '<h3>' . esc_html__('Export format:', 'mksddn-collection-for-postman') . '</h3>';
-        echo '<p><label><input type="radio" name="export_format" value="postman" checked> ' . esc_html__('Postman Collection (JSON)', 'mksddn-collection-for-postman') . '</label></p>';
-        echo '<p><label><input type="radio" name="export_format" value="openapi"> ' . esc_html__('OpenAPI 3.0 (JSON)', 'mksddn-collection-for-postman') . '</label></p>';
+        $this->render_block_start(__('Export format:', 'mksddn-collection-for-postman'));
+        echo '<div class="postman-admin-block__content postman-admin-block__content--options">';
+        echo '<label><input type="radio" name="export_format" value="postman" checked> ' . esc_html__('Postman Collection (JSON)', 'mksddn-collection-for-postman') . '</label>';
+        echo '<label><input type="radio" name="export_format" value="openapi"> ' . esc_html__('OpenAPI 3.0 (JSON)', 'mksddn-collection-for-postman') . '</label>';
+        echo '</div>';
+        $this->render_block_end();
 
-        echo '<br><button class="button button-primary" name="generate_postman">' . esc_html__('Generate and download', 'mksddn-collection-for-postman') . '</button>';
+        echo '<p class="postman-admin-submit"><button class="button button-primary" name="generate_postman">' . esc_html__('Generate and download', 'mksddn-collection-for-postman') . '</button></p>';
         echo '</form>';
     }
 
 
-    private function render_selection_buttons(): void {
-        echo '<div style="margin-bottom: 10px;">';
-        echo '<button type="button" class="button" onclick="selectAll(\'custom_page_slugs\')">' . esc_html__('Select All', 'mksddn-collection-for-postman') . '</button> ';
-        echo '<button type="button" class="button" onclick="deselectAll(\'custom_page_slugs\')">' . esc_html__('Deselect All', 'mksddn-collection-for-postman') . '</button>';
+    private function render_block_start(string $title): void {
+        echo '<div class="postman-admin-block">';
+        echo '<h3 class="postman-admin-block__title">' . esc_html($title) . '</h3>';
+    }
+
+
+    private function render_block_end(): void {
         echo '</div>';
     }
 
 
-    private function render_selection_buttons_categories(): void {
-        echo '<div style="margin-bottom: 10px;">';
-        echo '<button type="button" class="button" onclick="selectAll(\'custom_category_slugs\')">' . esc_html__('Select All', 'mksddn-collection-for-postman') . '</button> ';
-        echo '<button type="button" class="button" onclick="deselectAll(\'custom_category_slugs\')">' . esc_html__('Deselect All', 'mksddn-collection-for-postman') . '</button>';
+    private function render_selection_buttons(string $field_name): void {
+        $escaped = esc_js($field_name);
+        echo '<div class="postman-admin-block__actions">';
+        echo '<button type="button" class="button" onclick="selectAll(\'' . $escaped . '\')">' . esc_html__('Select All', 'mksddn-collection-for-postman') . '</button> ';
+        echo '<button type="button" class="button" onclick="deselectAll(\'' . $escaped . '\')">' . esc_html__('Deselect All', 'mksddn-collection-for-postman') . '</button>';
         echo '</div>';
     }
 
 
     private function render_pages_list(array $pages, array $selected_slugs): void {
-        echo '<ul style="max-height:200px;overflow:auto;border:1px solid #eee;padding:10px;margin-bottom:20px;">';
+        echo '<div class="postman-admin-block__content postman-admin-block__content--scrollable"><ul>';
         foreach ($pages as $page) {
             $slug = $page->post_name;
             echo '<li><label><input type="checkbox" name="custom_page_slugs[]" value="' . esc_attr($slug) . '"';
             checked(in_array($slug, $selected_slugs, true), true);
-            echo '> ' . esc_html($page->post_title) . ' <span style="color:#888">(' . esc_html($slug) . ')</span></label></li>';
+            echo '> ' . esc_html($page->post_title) . ' <span class="postman-admin-block__slug">(' . esc_html($slug) . ')</span></label></li>';
         }
-
-        echo '</ul>';
+        echo '</ul></div>';
     }
 
 
     private function render_categories_list(array $categories, array $selected_slugs): void {
-        echo '<ul style="max-height:200px;overflow:auto;border:1px solid #eee;padding:10px;margin-bottom:20px;">';
+        echo '<div class="postman-admin-block__content postman-admin-block__content--scrollable"><ul>';
         foreach ($categories as $cat) {
             $slug = isset($cat->slug) ? (string) $cat->slug : '';
             $name = isset($cat->name) ? (string) $cat->name : $slug;
@@ -291,39 +304,35 @@ class Postman_Admin {
             }
             echo '<li><label><input type="checkbox" name="custom_category_slugs[]" value="' . esc_attr($slug) . '"';
             checked(in_array($slug, $selected_slugs, true), true);
-            echo '> ' . esc_html($name) . ' <span style="color:#888">(' . esc_html($slug) . ')</span></label></li>';
+            echo '> ' . esc_html($name) . ' <span class="postman-admin-block__slug">(' . esc_html($slug) . ')</span></label></li>';
         }
-
-        echo '</ul>';
-    }
-
-
-    private function render_selection_buttons_custom_post_types(): void {
-        echo '<div style="margin-bottom: 10px;">';
-        echo '<button type="button" class="button" onclick="selectAll(\'custom_post_types\')">' . esc_html__('Select All', 'mksddn-collection-for-postman') . '</button> ';
-        echo '<button type="button" class="button" onclick="deselectAll(\'custom_post_types\')">' . esc_html__('Deselect All', 'mksddn-collection-for-postman') . '</button>';
-        echo '</div>';
+        echo '</ul></div>';
     }
 
 
     private function render_custom_post_types_list(array $custom_post_types, array $selected_types): void {
-        echo '<ul style="max-height:200px;overflow:auto;border:1px solid #eee;padding:10px;margin-bottom:20px;">';
+        echo '<div class="postman-admin-block__content postman-admin-block__content--scrollable"><ul>';
         foreach ($custom_post_types as $post_type_name => $post_type_obj) {
             $type_label = isset($post_type_obj->labels->name) ? (string) $post_type_obj->labels->name : ucfirst((string) $post_type_name);
             echo '<li><label><input type="checkbox" name="custom_post_types[]" value="' . esc_attr($post_type_name) . '" class="cpt-selector" data-cpt="' . esc_attr($post_type_name) . '"';
             checked(in_array($post_type_name, $selected_types, true), true);
-            echo '> ' . esc_html($type_label) . ' <span style="color:#888">(' . esc_html($post_type_name) . ')</span></label></li>';
+            echo '> ' . esc_html($type_label) . ' <span class="postman-admin-block__slug">(' . esc_html($post_type_name) . ')</span></label></li>';
         }
-
-        echo '</ul>';
+        echo '</ul></div>';
     }
 
 
     public function enqueue_admin_scripts(string $hook): void {
-        // Only load scripts on our admin page
         if ($hook !== 'toplevel_page_' . self::MENU_SLUG) {
             return;
         }
+
+        wp_enqueue_style(
+            'mksddn-postman-admin',
+            POSTMAN_PLUGIN_URL . 'assets/css/admin.css',
+            [],
+            POSTMAN_PLUGIN_VERSION
+        );
 
         $script_content = "
         function selectAll(name) {
