@@ -23,6 +23,48 @@ class Postman_Routes {
 
 
     /**
+     * Check if WooCommerce plugin is active.
+     *
+     * @return bool
+     */
+    private function is_woocommerce_active(): bool {
+        return class_exists('WooCommerce');
+    }
+
+
+    /**
+     * Check if ACF or Smart Custom Fields plugin is active.
+     * When active, ACF/SCF fields are included in REST API responses.
+     *
+     * @return bool
+     */
+    public static function is_acf_or_scf_active(): bool {
+        return class_exists('acf') || class_exists('SCF');
+    }
+
+
+    /**
+     * Filter public post types to exclude core types and product when WooCommerce is active.
+     *
+     * @param array $post_types Array of WP_Post_Type objects keyed by name.
+     * @return array Filtered custom post types.
+     */
+    public static function filter_custom_post_types(array $post_types): array {
+        $exclude = ['page', 'post', 'attachment'];
+        if (class_exists('WooCommerce')) {
+            $exclude[] = 'product';
+        }
+        $custom_post_types = [];
+        foreach ($post_types as $post_type) {
+            if (!in_array($post_type->name, $exclude, true)) {
+                $custom_post_types[$post_type->name] = $post_type;
+            }
+        }
+        return $custom_post_types;
+    }
+
+
+    /**
      * Check if Polylang plugin is active.
      *
      * @return bool
@@ -85,7 +127,12 @@ class Postman_Routes {
      * @return string
      */
     private function get_categories_fields_param(): string {
-        return 'id,count,description,name,slug,taxonomy,parent,thumbnail,acf,meta';
+        $fields = 'id,count,description,name,slug,taxonomy,parent,thumbnail';
+        if (self::is_acf_or_scf_active()) {
+            $fields .= ',acf';
+        }
+        $fields .= ',meta';
+        return $fields;
     }
 
 
@@ -95,7 +142,10 @@ class Postman_Routes {
      * @return string
      */
     private function get_detailed_fields_param(): string {
-        $fields = 'title,acf,content';
+        $fields = 'title,content';
+        if (self::is_acf_or_scf_active()) {
+            $fields .= ',acf';
+        }
         if ($this->is_yoast_active()) {
             $fields .= ',yoast_head_json';
         }
@@ -120,43 +170,152 @@ class Postman_Routes {
      */
     private function get_default_headers(): array {
         $language = $this->get_default_language();
-        
-        // Convert WordPress locale format (ru_RU) to RFC 5646 format (ru-RU)
         $accept_language = str_replace('_', '-', $language);
-        
-        return [
+
+        $headers = [
             [
                 'key'      => 'Accept-Language',
                 'value'    => $accept_language,
                 'disabled' => true,
             ],
         ];
+        Postman_Param_Descriptions::enrich_headers($headers);
+        return $headers;
     }
 
 
     /**
      * Get pagination query parameters (page and per_page) for list requests.
+     * Per https://developer.wordpress.org/rest-api/using-the-rest-api/pagination/
      *
      * @return array
      */
     private function get_pagination_params(): array {
-        return [
+        $params = [
+            ['key' => 'page', 'value' => '1', 'disabled' => true],
+            ['key' => 'per_page', 'value' => '10', 'disabled' => true],
+            ['key' => 'offset', 'value' => '0', 'disabled' => true],
+        ];
+        Postman_Param_Descriptions::enrich_query_params($params);
+        return $params;
+    }
+
+
+    /**
+     * Get WP REST API global params for list/collection endpoints.
+     * Per https://developer.wordpress.org/rest-api/using-the-rest-api/global-parameters/
+     *
+     * @param string $entity Entity type (posts, pages, categories, tags, comments, users).
+     * @return array
+     */
+    private function get_wp_list_extra_params(string $entity): array {
+        $params = [
             [
-                'key'      => 'page',
-                'value'    => '1',
-                'disabled' => true,
+                'key'       => 'context',
+                'value'     => 'view',
+                'disabled'  => true,
             ],
             [
-                'key'      => 'per_page',
-                'value'    => '10',
-                'disabled' => true,
+                'key'       => 'search',
+                'value'     => '',
+                'disabled'  => true,
+            ],
+            [
+                'key'       => 'order',
+                'value'     => 'desc',
+                'disabled'  => true,
+            ],
+            [
+                'key'       => 'orderby',
+                'value'     => 'date',
+                'disabled'  => true,
+            ],
+            [
+                'key'       => '_embed',
+                'value'     => '',
+                'disabled'  => true,
             ],
         ];
+        if (in_array($entity, ['posts', 'pages'], true)) {
+            array_splice($params, 2, 0, [[
+                'key'      => 'status',
+                'value'   => 'publish',
+                'disabled' => true,
+            ]]);
+        }
+        Postman_Param_Descriptions::enrich_query_params($params);
+        return $params;
+    }
+
+
+    /**
+     * Get WP REST API global params for single item GET (by slug/ID).
+     *
+     * @return array
+     */
+    private function get_wp_get_extra_params(): array {
+        $params = [
+            ['key' => 'context', 'value' => 'view', 'disabled' => true],
+            ['key' => '_embed', 'value' => '', 'disabled' => true],
+        ];
+        Postman_Param_Descriptions::enrich_query_params($params);
+        return $params;
+    }
+
+
+    /**
+     * Get WP REST API params for DELETE (force=true bypasses Trash).
+     * Per https://developer.wordpress.org/rest-api/reference/posts/#delete-a-post
+     *
+     * @return array
+     */
+    private function get_wp_delete_params(): array {
+        $params = [
+            ['key' => 'force', 'value' => 'false', 'disabled' => true],
+        ];
+        Postman_Param_Descriptions::enrich_query_params($params);
+        return $params;
+    }
+
+
+    /**
+     * Build search query params with descriptions. Type: post, page, or null for all.
+     */
+    private function build_search_query(?string $type): array {
+        $params = [
+            ['key' => 'search', 'value' => 'example'],
+            ['key' => '_fields', 'value' => $this->get_search_fields_param()],
+            ['key' => 'context', 'value' => 'view', 'disabled' => true],
+            ['key' => '_embed', 'value' => '', 'disabled' => true],
+        ];
+        if ($type !== null) {
+            array_unshift($params, ['key' => 'type', 'value' => $type]);
+        }
+        Postman_Param_Descriptions::enrich_query_params($params);
+        return $params;
+    }
+
+
+    /**
+     * Get auth headers for POST/PUT/PATCH/DELETE. X-WP-Nonce for same-origin.
+     * Per https://developer.wordpress.org/rest-api/using-the-rest-api/authentication/
+     *
+     * @return array
+     */
+    private function get_auth_headers(): array {
+        $headers = [
+            ['key' => 'X-WP-Nonce', 'value' => '{{wpNonce}}', 'disabled' => true],
+        ];
+        Postman_Param_Descriptions::enrich_headers($headers);
+        return $headers;
     }
 
 
     public function get_basic_routes(bool $acf_for_pages_list = false, bool $acf_for_posts_list = false): array {
         $basic_routes = [];
+        $acf_active = self::is_acf_or_scf_active();
+        $acf_for_pages_list = $acf_for_pages_list && $acf_active;
+        $acf_for_posts_list = $acf_for_posts_list && $acf_active;
 
         $standard_entities = [
             'pages'      => 'Page',
@@ -214,11 +373,12 @@ class Postman_Routes {
                 ];
             }
             
-            // Add pagination parameters for entities that support pagination (exclude 'settings')
             if ($entity !== 'settings') {
+                $query_params = array_merge($query_params, $this->get_wp_list_extra_params($entity));
                 $query_params = array_merge($query_params, $this->get_pagination_params());
             }
-            
+            Postman_Param_Descriptions::enrich_query_params($query_params);
+
             // Build raw URL
             $raw_url = '{{baseUrl}}/wp-json/wp/v2/' . $entity;
             if ($entity === 'posts') {
@@ -259,6 +419,22 @@ class Postman_Routes {
             ];
 
             // Get by Slug
+            $slug_query = array_merge(
+                in_array($entity, ['pages', 'posts'])
+                    ? array_merge(
+                        [['key' => 'slug', 'value' => ($entity === 'pages' ? 'sample-page' : 'hello-world')]],
+                        $acf_active ? [['key' => 'acf_format', 'value' => 'standard']] : [],
+                        [['key' => '_fields', 'value' => $this->get_detailed_fields_param()]]
+                    )
+                    : ($entity === 'categories'
+                        ? [
+                            ['key' => 'slug', 'value' => 'uncategorized'],
+                            ['key' => 'parent', 'value' => '1', 'disabled' => true],
+                        ]
+                        : [['key' => 'slug', 'value' => 'example']]),
+                $this->get_wp_get_extra_params()
+            );
+            Postman_Param_Descriptions::enrich_query_params($slug_query);
             $folder_items[] = [
                 'name'    => $singular . ' by Slug',
                 'request' => [
@@ -267,52 +443,30 @@ class Postman_Routes {
                     'url'         => [
                         'raw'   => (
                             in_array($entity, ['pages', 'posts'], true)
-                            ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=', $entity) . ($entity === 'pages' ? 'sample-page' : 'hello-world') . '&acf_format=standard&_fields=' . $this->get_detailed_fields_param()
+                            ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=', $entity) . ($entity === 'pages' ? 'sample-page' : 'hello-world') . ($acf_active ? '&acf_format=standard&' : '&') . '_fields=' . $this->get_detailed_fields_param()
                             : sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=', $entity) . ($entity === 'categories' ? 'uncategorized' : 'example')
                         ),
                         'host'  => ['{{baseUrl}}'],
                         'path'  => ['wp-json', 'wp', 'v2', $entity],
-                        'query' => (
-                            in_array($entity, ['pages', 'posts'])
-                            ? [
-                                [
-                                    'key'   => 'slug',
-                                    'value' => ($entity === 'pages' ? 'sample-page' : 'hello-world'),
-                                ],
-                                [
-                                    'key'   => 'acf_format',
-                                    'value' => 'standard',
-                                ],
-                                [
-                                    'key'   => '_fields',
-                                    'value' => $this->get_detailed_fields_param(),
-                                ],
-                            ]
-                            : ($entity === 'categories'
-                            ? [
-                                [
-                                    'key'   => 'slug',
-                                    'value' => 'uncategorized',
-                                ],
-                                [
-                                    'key'      => 'parent',
-                                    'value'    => '1',
-                                    'disabled' => true,
-                                ],
-                            ]
-                            : [
-                                [
-                                    'key'   => 'slug',
-                                    'value' => 'example',
-                                ],
-                            ])
-                        ),
+                        'query' => $slug_query,
                     ],
-                    'description' => sprintf('Get specific %s by slug', $singular) . (in_array($entity, ['pages', 'posts']) ? ' with ACF fields' : ''),
+                    'description' => sprintf('Get specific %s by slug', $singular) . (in_array($entity, ['pages', 'posts']) && $acf_active ? ' with ACF fields' : ''),
                 ],
             ];
 
             // Get by ID
+            $id_query = array_merge(
+                in_array($entity, ['pages', 'posts'])
+                    ? array_merge(
+                        $acf_active ? [['key' => 'acf_format', 'value' => 'standard']] : [],
+                        [['key' => '_fields', 'value' => $this->get_detailed_fields_param()]]
+                    )
+                    : ($entity === 'categories'
+                        ? [['key' => 'parent', 'value' => '1', 'disabled' => true]]
+                        : []),
+                $this->get_wp_get_extra_params()
+            );
+            Postman_Param_Descriptions::enrich_query_params($id_query);
             $folder_items[] = [
                 'name'    => $singular . ' by ID',
                 'request' => [
@@ -321,35 +475,15 @@ class Postman_Routes {
                     'url'         => [
                         'raw'   => (
                             in_array($entity, ['pages', 'posts'])
-                            ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $entity) . $singular . 'ID}}?acf_format=standard&_fields=' . $this->get_detailed_fields_param()
+                            ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $entity) . $singular . 'ID}}?'
+                                . ($acf_active ? 'acf_format=standard&' : '') . '_fields=' . $this->get_detailed_fields_param()
                             : sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $entity) . $singular . 'ID}}'
                         ),
                         'host'  => ['{{baseUrl}}'],
                         'path'  => ['wp-json', 'wp', 'v2', $entity, '{{' . $singular . 'ID}}'],
-                        'query' => (
-                            in_array($entity, ['pages', 'posts'])
-                            ? [
-                                [
-                                    'key'   => 'acf_format',
-                                    'value' => 'standard',
-                                ],
-                                [
-                                    'key'   => '_fields',
-                                    'value' => $this->get_detailed_fields_param(),
-                                ],
-                            ]
-                            : ($entity === 'categories'
-                            ? [
-                                [
-                                    'key'      => 'parent',
-                                    'value'    => '1',
-                                    'disabled' => true,
-                                ],
-                            ]
-                            : [])
-                        ),
+                        'query' => $id_query,
                     ],
-                    'description' => sprintf('Get specific %s by ID', $singular) . (in_array($entity, ['pages', 'posts']) ? ' with ACF fields' : ''),
+                    'description' => sprintf('Get specific %s by ID', $singular) . (in_array($entity, ['pages', 'posts']) && $acf_active ? ' with ACF fields' : ''),
                 ],
             ];
 
@@ -358,12 +492,10 @@ class Postman_Routes {
                 'name'    => 'Create ' . $singular,
                 'request' => [
                     'method'      => 'POST',
-                    'header'      => [
-                        [
-                            'key'   => 'Content-Type',
-                            'value' => 'application/json',
-                        ],
-                    ],
+                    'header'      => array_merge(
+                        $this->get_auth_headers(),
+                        [['key' => 'Content-Type', 'value' => 'application/json']]
+                    ),
                     'body'        => [
                         'mode' => 'raw',
                         'raw'  => wp_json_encode(
@@ -390,12 +522,10 @@ class Postman_Routes {
                 'name'    => 'Update ' . $singular,
                 'request' => [
                     'method'      => 'POST',
-                    'header'      => [
-                        [
-                            'key'   => 'Content-Type',
-                            'value' => 'application/json',
-                        ],
-                    ],
+                    'header'      => array_merge(
+                        $this->get_auth_headers(),
+                        [['key' => 'Content-Type', 'value' => 'application/json']]
+                    ),
                     'body'        => [
                         'mode' => 'raw',
                         'raw'  => wp_json_encode(
@@ -421,13 +551,14 @@ class Postman_Routes {
                 'name'    => 'Delete ' . $singular,
                 'request' => [
                     'method'      => 'DELETE',
-                    'header'      => [],
+                    'header'      => $this->get_auth_headers(),
                     'url'         => [
-                        'raw'  => sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $entity) . $singular . 'ID}}',
-                        'host' => ['{{baseUrl}}'],
-                        'path' => ['wp-json', 'wp', 'v2', $entity, '{{' . $singular . 'ID}}'],
+                        'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $entity) . $singular . 'ID}}',
+                        'host'  => ['{{baseUrl}}'],
+                        'path'  => ['wp-json', 'wp', 'v2', $entity, '{{' . $singular . 'ID}}'],
+                        'query' => $this->get_wp_delete_params(),
                     ],
-                    'description' => sprintf('Delete %s by ID', $singular),
+                    'description' => sprintf('Delete %s by ID. Add ?force=true to bypass Trash.', $singular),
                 ],
             ];
 
@@ -450,20 +581,7 @@ class Postman_Routes {
                             'raw'   => '{{baseUrl}}/wp-json/wp/v2/search?search=example&type=post&_fields=' . $this->get_search_fields_param(),
                             'host'  => ['{{baseUrl}}'],
                             'path'  => ['wp-json', 'wp', 'v2', 'search'],
-                            'query' => [
-                                [
-                                    'key'   => 'search',
-                                    'value' => 'example',
-                                ],
-                                [
-                                    'key'   => 'type',
-                                    'value' => 'post',
-                                ],
-                                [
-                                    'key'   => '_fields',
-                                    'value' => $this->get_search_fields_param(),
-                                ],
-                            ],
+                            'query' => $this->build_search_query('post'),
                         ],
                         'description' => 'Search for posts with keyword "example"',
                     ],
@@ -477,20 +595,7 @@ class Postman_Routes {
                             'raw'   => '{{baseUrl}}/wp-json/wp/v2/search?search=example&type=page&_fields=' . $this->get_search_fields_param(),
                             'host'  => ['{{baseUrl}}'],
                             'path'  => ['wp-json', 'wp', 'v2', 'search'],
-                            'query' => [
-                                [
-                                    'key'   => 'search',
-                                    'value' => 'example',
-                                ],
-                                [
-                                    'key'   => 'type',
-                                    'value' => 'page',
-                                ],
-                                [
-                                    'key'   => '_fields',
-                                    'value' => $this->get_search_fields_param(),
-                                ],
-                            ],
+                            'query' => $this->build_search_query('page'),
                         ],
                         'description' => 'Search for pages with keyword "example"',
                     ],
@@ -504,16 +609,7 @@ class Postman_Routes {
                             'raw'   => '{{baseUrl}}/wp-json/wp/v2/search?search=example&_fields=' . $this->get_search_fields_param(),
                             'host'  => ['{{baseUrl}}'],
                             'path'  => ['wp-json', 'wp', 'v2', 'search'],
-                            'query' => [
-                                [
-                                    'key'   => 'search',
-                                    'value' => 'example',
-                                ],
-                                [
-                                    'key'   => '_fields',
-                                    'value' => $this->get_search_fields_param(),
-                                ],
-                            ],
+                            'query' => $this->build_search_query(null),
                         ],
                         'description' => 'Search across all content types with keyword "example"',
                     ],
@@ -582,6 +678,9 @@ class Postman_Routes {
 
     public function get_custom_post_type_routes(array $custom_post_types, array $acf_for_cpt_lists = []): array {
         $custom_routes = [];
+        if (!self::is_acf_or_scf_active()) {
+            $acf_for_cpt_lists = [];
+        }
 
         foreach ($custom_post_types as $post_type_name => $post_type_obj) {
             $type_label = $post_type_obj->labels->name ?? ucfirst((string) $post_type_name);
@@ -651,11 +750,14 @@ class Postman_Routes {
 
         // Add ALL Forms (not just selected ones)
         $forms = get_posts([
-            'post_type'      => 'mksddn_fh_forms',
-            'posts_per_page' => -1,
-            'orderby'        => 'title',
-            'order'          => 'ASC',
-            'post_status'    => 'publish',
+            'post_type'              => 'mksddn_fh_forms',
+            'posts_per_page'         => -1,
+            'orderby'                => 'title',
+            'order'                  => 'ASC',
+            'post_status'            => 'publish',
+            'no_found_rows'          => true,
+            'update_post_meta_cache' => false,
+            'update_post_term_cache' => false,
         ]);
 
         foreach ($forms as $form) {
@@ -930,7 +1032,9 @@ class Postman_Routes {
     {
         $fields_param = $this->get_fields_param();
         $query_params = [];
-        
+        $acf_active = self::is_acf_or_scf_active();
+        $add_acf = $add_acf && $acf_active;
+
         if ($add_acf) {
             $fields_param .= ',acf';
             $query_params[] = [
@@ -938,20 +1042,43 @@ class Postman_Routes {
                 'value' => 'standard',
             ];
         }
-        
+
         $query_params[] = [
             'key'   => '_fields',
             'value' => $fields_param,
         ];
-        
-        // Add pagination parameters
+        $query_params = array_merge($query_params, $this->get_wp_list_extra_params($rest_base));
         $query_params = array_merge($query_params, $this->get_pagination_params());
-        
+        Postman_Param_Descriptions::enrich_query_params($query_params);
+
         $raw_url = sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s&page=1&per_page=10', $rest_base, $fields_param);
         if ($add_acf) {
             $raw_url = sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s&acf_format=standard&page=1&per_page=10', $rest_base, $fields_param);
         }
-        
+
+        $slug_value = 'example';
+        $cpt_slug_query = array_merge(
+            [['key' => 'slug', 'value' => $slug_value]],
+            $add_acf ? [['key' => 'acf_format', 'value' => 'standard']] : [],
+            [['key' => '_fields', 'value' => $this->get_detailed_fields_param()]],
+            $this->get_wp_get_extra_params()
+        );
+        Postman_Param_Descriptions::enrich_query_params($cpt_slug_query);
+
+        $cpt_id_query = array_merge(
+            $add_acf ? [['key' => 'acf_format', 'value' => 'standard']] : [],
+            [['key' => '_fields', 'value' => $this->get_detailed_fields_param()]],
+            $this->get_wp_get_extra_params()
+        );
+        Postman_Param_Descriptions::enrich_query_params($cpt_id_query);
+
+        $fields_param = $this->get_detailed_fields_param();
+        $slug_raw = sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=%s&_fields=%s', $rest_base, $slug_value, $fields_param);
+        if ($add_acf) {
+            $slug_raw = sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=%s&acf_format=standard&_fields=%s', $rest_base, $slug_value, $fields_param);
+        }
+        $id_raw = sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{%sID}}?', $rest_base, $singular_label) . ($add_acf ? 'acf_format=standard&' : '') . '_fields=' . $fields_param;
+
         return [[
             'name'    => 'List of ' . ucfirst($post_type_name),
             'request' => [
@@ -971,38 +1098,12 @@ class Postman_Routes {
                 'method'      => 'GET',
                 'header'      => $this->get_default_headers(),
                 'url'         => [
-                    'raw'   => (
-                        in_array($post_type_name, ['pages', 'posts'], true)
-                        ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=', $post_type_name) . ($post_type_name === 'pages' ? 'sample-page' : 'hello-world') . '&acf_format=standard&_fields=' . $this->get_detailed_fields_param()
-                        : sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=', $post_type_name) . ($post_type_name === 'categories' ? 'uncategorized' : 'example')
-                    ),
+                    'raw'   => $slug_raw,
                     'host'  => ['{{baseUrl}}'],
-                    'path'  => ['wp-json', 'wp', 'v2', $post_type_name],
-                    'query' => (
-                        in_array($post_type_name, ['pages', 'posts'], true)
-                        ? [
-                            [
-                                'key'   => 'slug',
-                                'value' => ($post_type_name === 'pages' ? 'sample-page' : 'hello-world'),
-                            ],
-                            [
-                                'key'   => 'acf_format',
-                                'value' => 'standard',
-                            ],
-                            [
-                                'key'   => '_fields',
-                                'value' => $this->get_detailed_fields_param(),
-                            ],
-                        ]
-                        : [
-                            [
-                                'key'   => 'slug',
-                                'value' => ($post_type_name === 'categories' ? 'uncategorized' : 'example'),
-                            ],
-                        ]
-                    ),
+                    'path'  => ['wp-json', 'wp', 'v2', $rest_base],
+                    'query' => $cpt_slug_query,
                 ],
-                'description' => sprintf('Get specific %s by slug', $singular_label) . (in_array($post_type_name, ['pages', 'posts']) ? ' with ACF fields' : ''),
+                'description' => sprintf('Get specific %s by slug', $singular_label) . ($add_acf ? ' with ACF fields' : ''),
             ],
         ], [
             'name'    => $singular_label . ' by ID',
@@ -1010,40 +1111,21 @@ class Postman_Routes {
                 'method'      => 'GET',
                 'header'      => $this->get_default_headers(),
                 'url'         => [
-                    'raw'   => (
-                        in_array($post_type_name, ['pages', 'posts'])
-                        ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $post_type_name) . $singular_label . 'ID}}?acf_format=standard&_fields=' . $this->get_detailed_fields_param()
-                        : sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $post_type_name) . $singular_label . 'ID}}'
-                    ),
+                    'raw'   => $id_raw,
                     'host'  => ['{{baseUrl}}'],
-                    'path'  => ['wp-json', 'wp', 'v2', $post_type_name, '{{' . $singular_label . 'ID}}'],
-                    'query' => (
-                        in_array($post_type_name, ['pages', 'posts'])
-                        ? [
-                            [
-                                'key'   => 'acf_format',
-                                'value' => 'standard',
-                            ],
-                            [
-                                'key'   => '_fields',
-                                'value' => $this->get_detailed_fields_param(),
-                            ],
-                        ]
-                        : []
-                    ),
+                    'path'  => ['wp-json', 'wp', 'v2', $rest_base, '{{' . $singular_label . 'ID}}'],
+                    'query' => $cpt_id_query,
                 ],
-                'description' => sprintf('Get specific %s by ID', $singular_label) . (in_array($post_type_name, ['pages', 'posts']) ? ' with ACF fields' : ''),
+                'description' => sprintf('Get specific %s by ID', $singular_label) . ($add_acf ? ' with ACF fields' : ''),
             ],
         ], [
             'name'    => 'Create ' . $singular_label,
             'request' => [
                 'method'      => 'POST',
-                'header'      => [
-                    [
-                        'key'   => 'Content-Type',
-                        'value' => 'application/json',
-                    ],
-                ],
+                'header'      => array_merge(
+                    $this->get_auth_headers(),
+                    [['key' => 'Content-Type', 'value' => 'application/json']]
+                ),
                 'body'        => [
                     'mode' => 'raw',
                     'raw'  => wp_json_encode(
@@ -1057,9 +1139,9 @@ class Postman_Routes {
                     ),
                 ],
                 'url'         => [
-                    'raw'  => '{{baseUrl}}/wp-json/wp/v2/' . $post_type_name,
+                    'raw'  => '{{baseUrl}}/wp-json/wp/v2/' . $rest_base,
                     'host' => ['{{baseUrl}}'],
-                    'path' => ['wp-json', 'wp', 'v2', $post_type_name],
+                    'path' => ['wp-json', 'wp', 'v2', $rest_base],
                 ],
                 'description' => 'Create new ' . $singular_label,
             ],
@@ -1067,12 +1149,10 @@ class Postman_Routes {
             'name'    => 'Update ' . $singular_label,
             'request' => [
                 'method'      => 'POST',
-                'header'      => [
-                    [
-                        'key'   => 'Content-Type',
-                        'value' => 'application/json',
-                    ],
-                ],
+                'header'      => array_merge(
+                    $this->get_auth_headers(),
+                    [['key' => 'Content-Type', 'value' => 'application/json']]
+                ),
                 'body'        => [
                     'mode' => 'raw',
                     'raw'  => wp_json_encode(
@@ -1085,9 +1165,9 @@ class Postman_Routes {
                     ),
                 ],
                 'url'         => [
-                    'raw'  => sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $post_type_name) . $singular_label . 'ID}}',
-                    'host' => ['{{baseUrl}}'],
-                    'path' => ['wp-json', 'wp', 'v2', $post_type_name, '{{' . $singular_label . 'ID}}'],
+                    'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $rest_base) . $singular_label . 'ID}}',
+                    'host'  => ['{{baseUrl}}'],
+                    'path'  => ['wp-json', 'wp', 'v2', $rest_base, '{{' . $singular_label . 'ID}}'],
                 ],
                 'description' => sprintf('Update existing %s by ID', $singular_label),
             ],
@@ -1095,13 +1175,14 @@ class Postman_Routes {
             'name'    => 'Delete ' . $singular_label,
             'request' => [
                 'method'      => 'DELETE',
-                'header'      => [],
+                'header'      => $this->get_auth_headers(),
                 'url'         => [
-                    'raw'  => sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $post_type_name) . $singular_label . 'ID}}',
-                    'host' => ['{{baseUrl}}'],
-                    'path' => ['wp-json', 'wp', 'v2', $post_type_name, '{{' . $singular_label . 'ID}}'],
+                    'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $rest_base) . $singular_label . 'ID}}',
+                    'host'  => ['{{baseUrl}}'],
+                    'path'  => ['wp-json', 'wp', 'v2', $rest_base, '{{' . $singular_label . 'ID}}'],
+                    'query' => $this->get_wp_delete_params(),
                 ],
-                'description' => sprintf('Delete %s by ID', $singular_label),
+                'description' => sprintf('Delete %s by ID. Add ?force=true to bypass Trash.', $singular_label),
             ],
         ]];
     }
@@ -1114,35 +1195,35 @@ class Postman_Routes {
 
         $specific_pages_items = [];
 
+        $acf_active = self::is_acf_or_scf_active();
+        $fields_param = $this->get_detailed_fields_param();
+
         foreach ($selected_page_slugs as $slug) {
             $page = get_page_by_path($slug, OBJECT, 'page');
             $page_title = $page ? $page->post_title : $slug;
 
+            $page_query = array_merge(
+                [['key' => 'slug', 'value' => $slug]],
+                $acf_active ? [['key' => 'acf_format', 'value' => 'standard']] : [],
+                [['key' => '_fields', 'value' => $fields_param]]
+            );
+            Postman_Param_Descriptions::enrich_query_params($page_query);
+            $raw_url = sprintf('{{baseUrl}}/wp-json/wp/v2/pages?slug=%s&_fields=%s', $slug, $fields_param);
+            if ($acf_active) {
+                $raw_url = sprintf('{{baseUrl}}/wp-json/wp/v2/pages?slug=%s&acf_format=standard&_fields=%s', $slug, $fields_param);
+            }
             $specific_pages_items[] = [
                 'name'    => $page_title,
                 'request' => [
                     'method'      => 'GET',
                     'header'      => $this->get_default_headers(),
                     'url'         => [
-                        'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/pages?slug=%s&acf_format=standard&_fields=%s', $slug, $this->get_detailed_fields_param()),
+                        'raw'   => $raw_url,
                         'host'  => ['{{baseUrl}}'],
                         'path'  => ['wp-json', 'wp', 'v2', 'pages'],
-                        'query' => [
-                            [
-                                'key'   => 'slug',
-                                'value' => $slug,
-                            ],
-                            [
-                                'key'   => 'acf_format',
-                                'value' => 'standard',
-                            ],
-                            [
-                                'key'   => '_fields',
-                                'value' => $this->get_detailed_fields_param(),
-                            ],
-                        ],
+                        'query' => $page_query,
                     ],
-                    'description' => sprintf('Get %s by slug with ACF fields', $page_title),
+                    'description' => sprintf('Get %s by slug', $page_title) . ($acf_active ? ' with ACF fields' : ''),
                 ],
             ];
         }
@@ -1155,65 +1236,396 @@ class Postman_Routes {
         ];
     }
 
-	/**
-	 * Build routes for posts filtered by selected categories (by slug).
-	 */
-	public function get_posts_by_categories_routes(array $selected_category_slugs): array {
-		if (empty($selected_category_slugs)) {
-			return [];
-		}
 
-		$items = [];
-		foreach ($selected_category_slugs as $slug) {
-			$term = get_term_by('slug', $slug, 'category');
-			if (!$term || is_wp_error($term)) {
-				continue;
-			}
-			$term_id = (int) $term->term_id;
-			$name = (string) $term->name;
+    /**
+     * Build WooCommerce REST API routes (products, categories, orders).
+     * Requires WooCommerce plugin. Uses wc/v3 namespace and Basic Auth.
+     *
+     * @return array Folder structure or empty if WooCommerce inactive
+     */
+    public function get_woocommerce_routes(): array {
+        if (!$this->is_woocommerce_active()) {
+            return [];
+        }
 
-			$items[] = [
-				'name'    => sprintf('Posts in %s', $name),
-				'request' => [
-					'method'      => 'GET',
-					'header'      => $this->get_default_headers(),
-					'url'         => [
-						'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/posts?_fields=%s&categories=%d', $this->get_posts_fields_param(), $term_id),
-						'host'  => ['{{baseUrl}}'],
-						'path'  => ['wp-json', 'wp', 'v2', 'posts'],
-						'query' => [
-							[
-								'key'   => '_fields',
-								'value' => $this->get_posts_fields_param(),
-							],
-							[
-								'key'   => 'categories',
-								'value' => (string) $term_id,
-							],
-							[
-								'key'      => 'page',
-								'value'    => '1',
-								'disabled' => true,
-							],
-							[
-								'key'      => 'per_page',
-								'value'    => '10',
-								'disabled' => true,
-							],
-							[
-								'key'      => 'offset',
-								'value'    => '0',
-								'disabled' => true,
-							],
-						],
-					],
-					'description' => sprintf('Get posts filtered by category \"%s\" (ID %d)', $name, $term_id),
-				],
-			];
-		}
+        $wc_base = 'wp-json/wc/v3';
+        $wc_auth = [
+            'type'  => 'basic',
+            'basic' => [
+                ['key' => 'username', 'value' => '{{wcConsumerKey}}', 'type' => 'string'],
+                ['key' => 'password', 'value' => '{{wcConsumerSecret}}', 'type' => 'string'],
+            ],
+        ];
 
-		return $items;
-	}
+        $wc_pagination = [
+            ['key' => 'page', 'value' => '1', 'disabled' => true],
+            ['key' => 'per_page', 'value' => '10', 'disabled' => true],
+        ];
+        Postman_Param_Descriptions::enrich_query_params($wc_pagination);
+
+        $products_items = $this->build_wc_products_routes($wc_base, $wc_pagination);
+        $categories_items = $this->build_wc_product_categories_routes($wc_base, $wc_pagination);
+        $orders_items = $this->build_wc_orders_routes($wc_base, $wc_pagination);
+
+        return [
+            [
+                'name' => 'WooCommerce',
+                'auth' => $wc_auth,
+                'item' => [
+                    ['name' => 'Products', 'item' => $products_items],
+                    ['name' => 'Product Categories', 'item' => $categories_items],
+                    ['name' => 'Orders', 'item' => $orders_items],
+                ],
+            ],
+        ];
+    }
+
+
+    /**
+     * @param string $wc_base
+     * @param array  $wc_pagination
+     * @return array
+     */
+    private function build_wc_products_routes(string $wc_base, array $wc_pagination): array {
+        $query_list = array_merge(
+            $wc_pagination,
+            [
+                ['key' => 'context', 'value' => 'view', 'disabled' => true],
+                ['key' => 'search', 'value' => '', 'disabled' => true],
+                ['key' => 'after', 'value' => '', 'disabled' => true],
+                ['key' => 'before', 'value' => '', 'disabled' => true],
+                ['key' => 'exclude', 'value' => '', 'disabled' => true],
+                ['key' => 'include', 'value' => '', 'disabled' => true],
+                ['key' => 'slug', 'value' => '', 'disabled' => true],
+                ['key' => 'status', 'value' => 'publish', 'disabled' => true],
+                ['key' => 'type', 'value' => 'simple', 'disabled' => true],
+                ['key' => 'category', 'value' => '', 'disabled' => true],
+                ['key' => 'tag', 'value' => '', 'disabled' => true],
+                ['key' => 'orderby', 'value' => 'date', 'disabled' => true],
+                ['key' => 'order', 'value' => 'desc', 'disabled' => true],
+            ]
+        );
+        Postman_Param_Descriptions::enrich_query_params($query_list);
+
+        $body_create = [
+            'name'         => 'Sample Product',
+            'type'         => 'simple',
+            'regular_price'=> '29.99',
+            'description'  => 'Product description.',
+            'short_description' => 'Short description.',
+            'status'       => 'draft',
+        ];
+
+        return [
+            [
+                'name'    => 'List Products',
+                'request' => [
+                    'method'      => 'GET',
+                    'header'      => $this->get_default_headers(),
+                    'url'         => [
+                        'raw'   => '{{baseUrl}}/' . $wc_base . '/products?page=1&per_page=10',
+                        'host'  => ['{{baseUrl}}'],
+                        'path'  => array_merge(['wp-json', 'wc', 'v3'], ['products']),
+                        'query' => $query_list,
+                    ],
+                    'description' => 'List all products. WooCommerce REST API.',
+                ],
+            ],
+            [
+                'name'    => 'Product by ID',
+                'request' => [
+                    'method'      => 'GET',
+                    'header'      => $this->get_default_headers(),
+                    'url'         => [
+                        'raw'   => '{{baseUrl}}/' . $wc_base . '/products/{{ProductID}}',
+                        'host'  => ['{{baseUrl}}'],
+                        'path'  => array_merge(['wp-json', 'wc', 'v3'], ['products', '{{ProductID}}']),
+                        'query' => [['key' => 'context', 'value' => 'view', 'disabled' => true]],
+                    ],
+                    'description' => 'Get product by ID.',
+                ],
+            ],
+            [
+                'name'    => 'Create Product',
+                'request' => [
+                    'method'      => 'POST',
+                    'header'      => [['key' => 'Content-Type', 'value' => 'application/json']],
+                    'body'        => [
+                        'mode' => 'raw',
+                        'raw'  => wp_json_encode($body_create, JSON_PRETTY_PRINT),
+                    ],
+                    'url'         => [
+                        'raw'  => '{{baseUrl}}/' . $wc_base . '/products',
+                        'host' => ['{{baseUrl}}'],
+                        'path' => array_merge(['wp-json', 'wc', 'v3'], ['products']),
+                    ],
+                    'description' => 'Create new product.',
+                ],
+            ],
+            [
+                'name'    => 'Update Product',
+                'request' => [
+                    'method'      => 'PUT',
+                    'header'      => [['key' => 'Content-Type', 'value' => 'application/json']],
+                    'body'        => [
+                        'mode' => 'raw',
+                        'raw'  => wp_json_encode([
+                            'name'          => 'Updated Product Name',
+                            'regular_price' => '39.99',
+                        ], JSON_PRETTY_PRINT),
+                    ],
+                    'url'         => [
+                        'raw'  => '{{baseUrl}}/' . $wc_base . '/products/{{ProductID}}',
+                        'host' => ['{{baseUrl}}'],
+                        'path' => array_merge(['wp-json', 'wc', 'v3'], ['products', '{{ProductID}}']),
+                    ],
+                    'description' => 'Update product by ID.',
+                ],
+            ],
+            [
+                'name'    => 'Delete Product',
+                'request' => [
+                    'method'      => 'DELETE',
+                    'header'      => [],
+                    'url'         => [
+                        'raw'   => '{{baseUrl}}/' . $wc_base . '/products/{{ProductID}}?force=true',
+                        'host'  => ['{{baseUrl}}'],
+                        'path'  => array_merge(['wp-json', 'wc', 'v3'], ['products', '{{ProductID}}']),
+                        'query' => [['key' => 'force', 'value' => 'true', 'disabled' => true]],
+                    ],
+                    'description' => 'Delete product. Use force=true for permanent delete.',
+                ],
+            ],
+        ];
+    }
+
+
+    /**
+     * @param string $wc_base
+     * @param array  $wc_pagination
+     * @return array
+     */
+    private function build_wc_product_categories_routes(string $wc_base, array $wc_pagination): array {
+        $query_list = array_merge(
+            $wc_pagination,
+            [
+                ['key' => 'context', 'value' => 'view', 'disabled' => true],
+                ['key' => 'search', 'value' => '', 'disabled' => true],
+                ['key' => 'exclude', 'value' => '', 'disabled' => true],
+                ['key' => 'include', 'value' => '', 'disabled' => true],
+                ['key' => 'slug', 'value' => '', 'disabled' => true],
+                ['key' => 'parent', 'value' => '0', 'disabled' => true],
+                ['key' => 'orderby', 'value' => 'name', 'disabled' => true],
+                ['key' => 'order', 'value' => 'asc', 'disabled' => true],
+            ]
+        );
+        Postman_Param_Descriptions::enrich_query_params($query_list);
+
+        $body_create = [
+            'name'        => 'Sample Category',
+            'slug'        => 'sample-category',
+            'description' => 'Category description.',
+            'parent'      => 0,
+        ];
+
+        return [
+            [
+                'name'    => 'List Product Categories',
+                'request' => [
+                    'method'      => 'GET',
+                    'header'      => $this->get_default_headers(),
+                    'url'         => [
+                        'raw'   => '{{baseUrl}}/' . $wc_base . '/products/categories?page=1&per_page=10',
+                        'host'  => ['{{baseUrl}}'],
+                        'path'  => array_merge(['wp-json', 'wc', 'v3'], ['products', 'categories']),
+                        'query' => $query_list,
+                    ],
+                    'description' => 'List all product categories.',
+                ],
+            ],
+            [
+                'name'    => 'Product Category by ID',
+                'request' => [
+                    'method'      => 'GET',
+                    'header'      => $this->get_default_headers(),
+                    'url'         => [
+                        'raw'  => '{{baseUrl}}/' . $wc_base . '/products/categories/{{ProductCategoryID}}',
+                        'host' => ['{{baseUrl}}'],
+                        'path' => array_merge(['wp-json', 'wc', 'v3'], ['products', 'categories', '{{ProductCategoryID}}']),
+                        'query' => [['key' => 'context', 'value' => 'view', 'disabled' => true]],
+                    ],
+                    'description' => 'Get product category by ID.',
+                ],
+            ],
+            [
+                'name'    => 'Create Product Category',
+                'request' => [
+                    'method'      => 'POST',
+                    'header'      => [['key' => 'Content-Type', 'value' => 'application/json']],
+                    'body'        => [
+                        'mode' => 'raw',
+                        'raw'  => wp_json_encode($body_create, JSON_PRETTY_PRINT),
+                    ],
+                    'url'         => [
+                        'raw'  => '{{baseUrl}}/' . $wc_base . '/products/categories',
+                        'host' => ['{{baseUrl}}'],
+                        'path' => array_merge(['wp-json', 'wc', 'v3'], ['products', 'categories']),
+                    ],
+                    'description' => 'Create new product category.',
+                ],
+            ],
+            [
+                'name'    => 'Update Product Category',
+                'request' => [
+                    'method'      => 'PUT',
+                    'header'      => [['key' => 'Content-Type', 'value' => 'application/json']],
+                    'body'        => [
+                        'mode' => 'raw',
+                        'raw'  => wp_json_encode(['name' => 'Updated Category', 'slug' => 'updated-category'], JSON_PRETTY_PRINT),
+                    ],
+                    'url'         => [
+                        'raw'  => '{{baseUrl}}/' . $wc_base . '/products/categories/{{ProductCategoryID}}',
+                        'host' => ['{{baseUrl}}'],
+                        'path' => array_merge(['wp-json', 'wc', 'v3'], ['products', 'categories', '{{ProductCategoryID}}']),
+                    ],
+                    'description' => 'Update product category by ID.',
+                ],
+            ],
+            [
+                'name'    => 'Delete Product Category',
+                'request' => [
+                    'method'      => 'DELETE',
+                    'header'      => [],
+                    'url'         => [
+                        'raw'   => '{{baseUrl}}/' . $wc_base . '/products/categories/{{ProductCategoryID}}?force=true',
+                        'host'  => ['{{baseUrl}}'],
+                        'path'  => array_merge(['wp-json', 'wc', 'v3'], ['products', 'categories', '{{ProductCategoryID}}']),
+                        'query' => [['key' => 'force', 'value' => 'true', 'disabled' => true]],
+                    ],
+                    'description' => 'Delete product category. Use force=true for permanent delete.',
+                ],
+            ],
+        ];
+    }
+
+
+    /**
+     * @param string $wc_base
+     * @param array  $wc_pagination
+     * @return array
+     */
+    private function build_wc_orders_routes(string $wc_base, array $wc_pagination): array {
+        $query_list = array_merge(
+            $wc_pagination,
+            [
+                ['key' => 'context', 'value' => 'view', 'disabled' => true],
+                ['key' => 'search', 'value' => '', 'disabled' => true],
+                ['key' => 'after', 'value' => '', 'disabled' => true],
+                ['key' => 'before', 'value' => '', 'disabled' => true],
+                ['key' => 'status', 'value' => 'any', 'disabled' => true],
+                ['key' => 'customer', 'value' => '', 'disabled' => true],
+                ['key' => 'product', 'value' => '', 'disabled' => true],
+                ['key' => 'orderby', 'value' => 'date', 'disabled' => true],
+                ['key' => 'order', 'value' => 'desc', 'disabled' => true],
+            ]
+        );
+        Postman_Param_Descriptions::enrich_query_params($query_list);
+
+        $body_create = [
+            'payment_method' => 'bacs',
+            'billing'       => [
+                'first_name' => 'John',
+                'last_name'  => 'Doe',
+                'address_1'  => '123 Main St',
+                'city'       => 'Anytown',
+                'postcode'   => '12345',
+                'country'    => 'US',
+                'email'      => 'john@example.com',
+            ],
+            'line_items' => [
+                ['product_id' => 1, 'quantity' => 1],
+            ],
+        ];
+
+        return [
+            [
+                'name'    => 'List Orders',
+                'request' => [
+                    'method'      => 'GET',
+                    'header'      => $this->get_default_headers(),
+                    'url'         => [
+                        'raw'   => '{{baseUrl}}/' . $wc_base . '/orders?page=1&per_page=10',
+                        'host'  => ['{{baseUrl}}'],
+                        'path'  => array_merge(['wp-json', 'wc', 'v3'], ['orders']),
+                        'query' => $query_list,
+                    ],
+                    'description' => 'List all orders.',
+                ],
+            ],
+            [
+                'name'    => 'Order by ID',
+                'request' => [
+                    'method'      => 'GET',
+                    'header'      => $this->get_default_headers(),
+                    'url'         => [
+                        'raw'  => '{{baseUrl}}/' . $wc_base . '/orders/{{OrderID}}',
+                        'host' => ['{{baseUrl}}'],
+                        'path' => array_merge(['wp-json', 'wc', 'v3'], ['orders', '{{OrderID}}']),
+                        'query' => [['key' => 'context', 'value' => 'view', 'disabled' => true]],
+                    ],
+                    'description' => 'Get order by ID.',
+                ],
+            ],
+            [
+                'name'    => 'Create Order',
+                'request' => [
+                    'method'      => 'POST',
+                    'header'      => [['key' => 'Content-Type', 'value' => 'application/json']],
+                    'body'        => [
+                        'mode' => 'raw',
+                        'raw'  => wp_json_encode($body_create, JSON_PRETTY_PRINT),
+                    ],
+                    'url'         => [
+                        'raw'  => '{{baseUrl}}/' . $wc_base . '/orders',
+                        'host' => ['{{baseUrl}}'],
+                        'path' => array_merge(['wp-json', 'wc', 'v3'], ['orders']),
+                    ],
+                    'description' => 'Create new order.',
+                ],
+            ],
+            [
+                'name'    => 'Update Order',
+                'request' => [
+                    'method'      => 'PUT',
+                    'header'      => [['key' => 'Content-Type', 'value' => 'application/json']],
+                    'body'        => [
+                        'mode' => 'raw',
+                        'raw'  => wp_json_encode(['status' => 'processing'], JSON_PRETTY_PRINT),
+                    ],
+                    'url'         => [
+                        'raw'  => '{{baseUrl}}/' . $wc_base . '/orders/{{OrderID}}',
+                        'host' => ['{{baseUrl}}'],
+                        'path' => array_merge(['wp-json', 'wc', 'v3'], ['orders', '{{OrderID}}']),
+                    ],
+                    'description' => 'Update order by ID.',
+                ],
+            ],
+            [
+                'name'    => 'Delete Order',
+                'request' => [
+                    'method'      => 'DELETE',
+                    'header'      => [],
+                    'url'         => [
+                        'raw'   => '{{baseUrl}}/' . $wc_base . '/orders/{{OrderID}}?force=true',
+                        'host'  => ['{{baseUrl}}'],
+                        'path'  => array_merge(['wp-json', 'wc', 'v3'], ['orders', '{{OrderID}}']),
+                        'query' => [['key' => 'force', 'value' => 'true', 'disabled' => true]],
+                    ],
+                    'description' => 'Delete order. Use force=true for permanent delete.',
+                ],
+            ],
+        ];
+    }
 
 
     public function get_variables(array $custom_post_types): array {
@@ -1221,6 +1633,10 @@ class Postman_Routes {
             [
                 'key'   => 'baseUrl',
                 'value' => home_url(),
+            ],
+            [
+                'key'   => 'wpNonce',
+                'value' => '',
             ],
             [
                 'key'   => 'PostID',
@@ -1251,6 +1667,14 @@ class Postman_Routes {
                 'value' => '1',
             ],
         ];
+
+        if ($this->is_woocommerce_active()) {
+            $variables[] = ['key' => 'wcConsumerKey', 'value' => ''];
+            $variables[] = ['key' => 'wcConsumerSecret', 'value' => ''];
+            $variables[] = ['key' => 'ProductID', 'value' => '1'];
+            $variables[] = ['key' => 'ProductCategoryID', 'value' => '1'];
+            $variables[] = ['key' => 'OrderID', 'value' => '1'];
+        }
 
         // Add variables for custom post types
         foreach ($custom_post_types as $post_type_name => $post_type_obj) {

@@ -1,7 +1,12 @@
 <?php
-
 /**
  * @file: includes/class-postman-admin.php
+ */
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+/**
  * @description: Admin UI for generating and downloading Postman Collection.
  * @dependencies: Postman_Generator, Postman_Options
  * @created: 2025-08-19
@@ -51,9 +56,10 @@ class Postman_Admin {
 
     private function get_page_data(): array {
         $post_types = get_post_types(['public' => true], 'objects');
-        $custom_post_types = $this->filter_custom_post_types($post_types);
+        $custom_post_types = Postman_Routes::filter_custom_post_types($post_types);
 
         return [
+            'woocommerce_active' => $this->is_woocommerce_active(),
             'pages' => $this->get_pages(),
             'posts' => $this->get_posts(),
             'custom_post_types' => $custom_post_types,
@@ -64,75 +70,70 @@ class Postman_Admin {
             'selected_post_slugs' => $this->get_selected_post_slugs(),
             'selected_custom_slugs' => $this->get_selected_custom_slugs(),
             'selected_options_pages' => $this->get_selected_options_pages(),
-            'categories' => $this->get_categories(),
-            'selected_category_slugs' => $this->get_selected_category_slugs(),
             'selected_custom_post_types' => $this->get_selected_custom_post_types(),
-            'acf_for_pages_list' => $this->get_acf_for_pages_list(),
-            'acf_for_posts_list' => $this->get_acf_for_posts_list(),
-            'acf_for_cpt_lists' => $this->get_acf_for_cpt_lists(),
+            'include_woocommerce' => $this->get_include_woocommerce(),
         ];
     }
 
 
-    private function filter_custom_post_types(array $post_types): array {
-        $custom_post_types = [];
-        foreach ($post_types as $post_type) {
-            if (!in_array($post_type->name, ['page', 'post', 'attachment'], true)) {
-                $custom_post_types[$post_type->name] = $post_type;
-            }
-        }
+    private function is_woocommerce_active(): bool {
+        return class_exists('WooCommerce');
+    }
 
-        return $custom_post_types;
+
+    private function get_include_woocommerce(): bool {
+        // phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in handle_generation before this is called.
+        if (!isset($_POST['include_woocommerce'])) {
+            return true;
+        }
+        return sanitize_key((string) $_POST['include_woocommerce']) === '1';
+        // phpcs:enable WordPress.Security.NonceVerification.Missing
     }
 
 
     private function get_pages(): array {
         return get_posts([
-            'post_type' => 'page',
-            'posts_per_page' => -1,
-            'orderby' => 'title',
-            'order' => 'ASC',
-            'post_status' => 'publish',
+            'post_type'              => 'page',
+            'posts_per_page'         => -1,
+            'orderby'                => 'title',
+            'order'                  => 'ASC',
+            'post_status'            => 'publish',
+            'no_found_rows'          => true,
+            'update_post_meta_cache' => false,
+            'update_post_term_cache' => false,
         ]);
     }
 
 
     private function get_posts(): array {
         return get_posts([
-            'post_type' => 'post',
-            'posts_per_page' => -1,
-            'orderby' => 'title',
-            'order' => 'ASC',
-            'post_status' => 'publish',
+            'post_type'              => 'post',
+            'posts_per_page'         => -1,
+            'orderby'                => 'title',
+            'order'                  => 'ASC',
+            'post_status'            => 'publish',
+            'no_found_rows'          => true,
+            'update_post_meta_cache' => false,
+            'update_post_term_cache' => false,
         ]);
     }
 
-	/**
-	 * Get categories terms.
-	 *
-	 * @return array List of WP_Term for taxonomy 'category'
-	 */
-	private function get_categories(): array {
-		$terms = get_terms([
-			'taxonomy' => 'category',
-			'hide_empty' => false,
-			'orderby' => 'name',
-			'order' => 'ASC',
-		]);
-		return is_array($terms) ? $terms : [];
-	}
-
-
     private function get_custom_posts(array $custom_post_types): array {
         $custom_posts = [];
+        $query_args = [
+            'posts_per_page'         => -1,
+            'orderby'                => 'title',
+            'order'                  => 'ASC',
+            'post_status'            => 'publish',
+            'no_found_rows'          => true,
+            'update_post_meta_cache' => false,
+            'update_post_term_cache' => false,
+        ];
         foreach (array_keys($custom_post_types) as $post_type_name) {
-            $custom_posts[$post_type_name] = get_posts([
-                'post_type' => $post_type_name,
-                'posts_per_page' => -1,
-                'orderby' => 'title',
-                'order' => 'ASC',
-                'post_status' => 'publish',
-            ]);
+            $custom_posts[$post_type_name] = get_posts(array_merge(
+                $query_args,
+                ['post_type' => $post_type_name]
+            ));
         }
 
         return $custom_posts;
@@ -172,13 +173,6 @@ class Postman_Admin {
     }
 
 
-    private function get_selected_category_slugs(): array {
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Used only to pre-fill admin form; nonce is verified on action submit and values are sanitized below.
-        $slugs = isset($_POST['custom_category_slugs']) ? (array) wp_unslash($_POST['custom_category_slugs']) : [];
-        return array_values(array_filter(array_map('sanitize_title', $slugs)));
-    }
-
-
     private function get_selected_custom_post_types(): array {
         // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Used only to pre-fill admin form; nonce is verified on action submit and values are sanitized below.
         $types = isset($_POST['custom_post_types']) ? (array) wp_unslash($_POST['custom_post_types']) : [];
@@ -186,22 +180,10 @@ class Postman_Admin {
     }
 
 
-    private function get_acf_for_pages_list(): bool {
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Used only to pre-fill admin form; nonce is verified on action submit and values are sanitized below.
-        return isset($_POST['acf_for_pages_list']) && $_POST['acf_for_pages_list'] === '1';
-    }
-
-
-    private function get_acf_for_posts_list(): bool {
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Used only to pre-fill admin form; nonce is verified on action submit and values are sanitized below.
-        return isset($_POST['acf_for_posts_list']) && $_POST['acf_for_posts_list'] === '1';
-    }
-
-
-    private function get_acf_for_cpt_lists(): array {
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Used only to pre-fill admin form; nonce is verified on action submit and values are sanitized below.
-        $cpt_acf = isset($_POST['acf_for_cpt_lists']) ? (array) wp_unslash($_POST['acf_for_cpt_lists']) : [];
-        return array_values(array_filter(array_map('sanitize_key', $cpt_acf)));
+    private function get_export_format(): string {
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in handle_generation.
+        $format = isset($_POST['export_format']) ? sanitize_key((string) $_POST['export_format']) : 'postman';
+        return $format === 'openapi' ? 'openapi' : 'postman';
     }
 
 
@@ -220,136 +202,97 @@ class Postman_Admin {
         wp_nonce_field(self::NONCE_ACTION);
         echo '<input type="hidden" name="action" value="generate_postman_collection">';
 
-        echo '<h3>' . esc_html__('Add individual requests for pages:', 'mksddn-collection-for-postman') . '</h3>';
-        $this->render_selection_buttons();
+        $this->render_block_start(__('Add individual requests for pages:', 'mksddn-collection-for-postman'));
+        $this->render_selection_buttons('custom_page_slugs');
         $this->render_pages_list($data['pages'], $data['selected_page_slugs']);
-
-        echo '<h3>' . esc_html__('Add requests for posts by categories:', 'mksddn-collection-for-postman') . '</h3>';
-        $this->render_selection_buttons_categories();
-        $this->render_categories_list($data['categories'], $data['selected_category_slugs']);
+        $this->render_block_end();
 
         if (!empty($data['custom_post_types'])) {
-            echo '<h3>' . esc_html__('Add requests for Custom Post Types:', 'mksddn-collection-for-postman') . '</h3>';
-            $this->render_selection_buttons_custom_post_types();
+            $this->render_block_start(__('Add requests for Custom Post Types:', 'mksddn-collection-for-postman'));
+            $this->render_selection_buttons('custom_post_types');
             $this->render_custom_post_types_list($data['custom_post_types'], $data['selected_custom_post_types']);
+            $this->render_block_end();
         }
 
-        echo '<h3>' . esc_html__('ACF Fields for Lists:', 'mksddn-collection-for-postman') . '</h3>';
-        $this->render_selection_buttons_acf();
-        $this->render_acf_checkboxes($data);
+        if (!empty($data['woocommerce_active'])) {
+            $this->render_block_start(__('WooCommerce REST API:', 'mksddn-collection-for-postman'));
+            echo '<div class="postman-admin-block__content postman-admin-block__content--options">';
+            echo '<input type="hidden" name="include_woocommerce" value="0">';
+            echo '<label><input type="checkbox" name="include_woocommerce" value="1"';
+            checked($data['include_woocommerce'], true);
+            echo '> ' . esc_html__('Include WooCommerce REST API (products, categories, orders)', 'mksddn-collection-for-postman') . '</label>';
+            echo '</div>';
+            echo '<p class="postman-admin-block__description">' . esc_html__('Requires WooCommerce. Auth: Consumer Key + Secret (Settings > Advanced > REST API).', 'mksddn-collection-for-postman') . '</p>';
+            $this->render_block_end();
+        }
 
-        echo '<br><button class="button button-primary" name="generate_postman">' . esc_html__('Generate and download collection', 'mksddn-collection-for-postman') . '</button>';
+        $this->render_block_start(__('Export format:', 'mksddn-collection-for-postman'));
+        echo '<div class="postman-admin-block__content postman-admin-block__content--options">';
+        echo '<label><input type="radio" name="export_format" value="postman" checked> ' . esc_html__('Postman Collection (JSON)', 'mksddn-collection-for-postman') . '</label>';
+        echo '<label><input type="radio" name="export_format" value="openapi"> ' . esc_html__('OpenAPI 3.0 (JSON)', 'mksddn-collection-for-postman') . '</label>';
+        echo '</div>';
+        $this->render_block_end();
+
+        echo '<p class="postman-admin-submit"><button class="button button-primary" name="generate_postman">' . esc_html__('Generate and download', 'mksddn-collection-for-postman') . '</button></p>';
         echo '</form>';
     }
 
 
-    private function render_selection_buttons(): void {
-        echo '<div style="margin-bottom: 10px;">';
-        echo '<button type="button" class="button" onclick="selectAll(\'custom_page_slugs\')">' . esc_html__('Select All', 'mksddn-collection-for-postman') . '</button> ';
-        echo '<button type="button" class="button" onclick="deselectAll(\'custom_page_slugs\')">' . esc_html__('Deselect All', 'mksddn-collection-for-postman') . '</button>';
+    private function render_block_start(string $title): void {
+        echo '<div class="postman-admin-block">';
+        echo '<h3 class="postman-admin-block__title">' . esc_html($title) . '</h3>';
+    }
+
+
+    private function render_block_end(): void {
         echo '</div>';
     }
 
 
-    private function render_selection_buttons_categories(): void {
-        echo '<div style="margin-bottom: 10px;">';
-        echo '<button type="button" class="button" onclick="selectAll(\'custom_category_slugs\')">' . esc_html__('Select All', 'mksddn-collection-for-postman') . '</button> ';
-        echo '<button type="button" class="button" onclick="deselectAll(\'custom_category_slugs\')">' . esc_html__('Deselect All', 'mksddn-collection-for-postman') . '</button>';
+    private function render_selection_buttons(string $field_name): void {
+        $field_js = esc_js($field_name);
+        echo '<div class="postman-admin-block__actions">';
+        echo '<button type="button" class="button" onclick="selectAll(\'' . esc_attr($field_js) . '\')">' . esc_html__('Select All', 'mksddn-collection-for-postman') . '</button> ';
+        echo '<button type="button" class="button" onclick="deselectAll(\'' . esc_attr($field_js) . '\')">' . esc_html__('Deselect All', 'mksddn-collection-for-postman') . '</button>';
         echo '</div>';
     }
 
 
     private function render_pages_list(array $pages, array $selected_slugs): void {
-        echo '<ul style="max-height:200px;overflow:auto;border:1px solid #eee;padding:10px;margin-bottom:20px;">';
+        echo '<div class="postman-admin-block__content postman-admin-block__content--scrollable"><ul>';
         foreach ($pages as $page) {
             $slug = $page->post_name;
             echo '<li><label><input type="checkbox" name="custom_page_slugs[]" value="' . esc_attr($slug) . '"';
             checked(in_array($slug, $selected_slugs, true), true);
-            echo '> ' . esc_html($page->post_title) . ' <span style="color:#888">(' . esc_html($slug) . ')</span></label></li>';
+            echo '> ' . esc_html($page->post_title) . ' <span class="postman-admin-block__slug">(' . esc_html($slug) . ')</span></label></li>';
         }
-
-        echo '</ul>';
-    }
-
-
-    private function render_categories_list(array $categories, array $selected_slugs): void {
-        echo '<ul style="max-height:200px;overflow:auto;border:1px solid #eee;padding:10px;margin-bottom:20px;">';
-        foreach ($categories as $cat) {
-            $slug = isset($cat->slug) ? (string) $cat->slug : '';
-            $name = isset($cat->name) ? (string) $cat->name : $slug;
-            if ($slug === '') {
-                continue;
-            }
-            echo '<li><label><input type="checkbox" name="custom_category_slugs[]" value="' . esc_attr($slug) . '"';
-            checked(in_array($slug, $selected_slugs, true), true);
-            echo '> ' . esc_html($name) . ' <span style="color:#888">(' . esc_html($slug) . ')</span></label></li>';
-        }
-
-        echo '</ul>';
-    }
-
-
-    private function render_selection_buttons_custom_post_types(): void {
-        echo '<div style="margin-bottom: 10px;">';
-        echo '<button type="button" class="button" onclick="selectAll(\'custom_post_types\')">' . esc_html__('Select All', 'mksddn-collection-for-postman') . '</button> ';
-        echo '<button type="button" class="button" onclick="deselectAll(\'custom_post_types\')">' . esc_html__('Deselect All', 'mksddn-collection-for-postman') . '</button>';
-        echo '</div>';
+        echo '</ul></div>';
     }
 
 
     private function render_custom_post_types_list(array $custom_post_types, array $selected_types): void {
-        echo '<ul style="max-height:200px;overflow:auto;border:1px solid #eee;padding:10px;margin-bottom:20px;">';
+        echo '<div class="postman-admin-block__content postman-admin-block__content--scrollable"><ul>';
         foreach ($custom_post_types as $post_type_name => $post_type_obj) {
             $type_label = isset($post_type_obj->labels->name) ? (string) $post_type_obj->labels->name : ucfirst((string) $post_type_name);
             echo '<li><label><input type="checkbox" name="custom_post_types[]" value="' . esc_attr($post_type_name) . '" class="cpt-selector" data-cpt="' . esc_attr($post_type_name) . '"';
             checked(in_array($post_type_name, $selected_types, true), true);
-            echo '> ' . esc_html($type_label) . ' <span style="color:#888">(' . esc_html($post_type_name) . ')</span></label></li>';
+            echo '> ' . esc_html($type_label) . ' <span class="postman-admin-block__slug">(' . esc_html($post_type_name) . ')</span></label></li>';
         }
-
-        echo '</ul>';
-    }
-
-
-    private function render_selection_buttons_acf(): void {
-        echo '<div style="margin-bottom: 10px;">';
-        echo '<button type="button" class="button" onclick="selectAllAcf()">' . esc_html__('Select All', 'mksddn-collection-for-postman') . '</button> ';
-        echo '<button type="button" class="button" onclick="deselectAllAcf()">' . esc_html__('Deselect All', 'mksddn-collection-for-postman') . '</button>';
-        echo '</div>';
-    }
-
-
-    private function render_acf_checkboxes(array $data): void {
-        echo '<ul style="max-height:200px;overflow:auto;border:1px solid #eee;padding:10px;margin-bottom:20px;" id="acf-fields-list">';
-        
-        echo '<li><label><input type="checkbox" name="acf_for_pages_list" value="1"';
-        checked($data['acf_for_pages_list'], true);
-        echo '> ' . esc_html__('Add ACF fields for LIST of pages', 'mksddn-collection-for-postman') . '</label></li>';
-
-        echo '<li><label><input type="checkbox" name="acf_for_posts_list" value="1"';
-        checked($data['acf_for_posts_list'], true);
-        echo '> ' . esc_html__('Add ACF fields for LIST of posts', 'mksddn-collection-for-postman') . '</label></li>';
-
-        // Show all CPT checkboxes, but hide those that are not selected in "Add requests for Custom Post Types"
-        if (!empty($data['custom_post_types'])) {
-            foreach ($data['custom_post_types'] as $post_type_name => $post_type_obj) {
-                $type_label = isset($post_type_obj->labels->name) ? (string) $post_type_obj->labels->name : ucfirst((string) $post_type_name);
-                $is_selected = in_array($post_type_name, $data['selected_custom_post_types'], true);
-                echo '<li class="acf-cpt-item" data-cpt="' . esc_attr($post_type_name) . '"' . ($is_selected ? '' : ' style="' . esc_attr('display:none;') . '"') . '><label><input type="checkbox" name="acf_for_cpt_lists[]" value="' . esc_attr($post_type_name) . '"';
-                checked(in_array($post_type_name, $data['acf_for_cpt_lists'], true), true);
-                /* translators: %s: Custom post type label */
-                echo '> ' . esc_html(sprintf(__('Add ACF fields for LIST of %s', 'mksddn-collection-for-postman'), $type_label)) . '</label></li>';
-            }
-        }
-
-        echo '</ul>';
+        echo '</ul></div>';
     }
 
 
     public function enqueue_admin_scripts(string $hook): void {
-        // Only load scripts on our admin page
         if ($hook !== 'toplevel_page_' . self::MENU_SLUG) {
             return;
         }
+
+        wp_enqueue_style(
+            'mksddn-postman-admin',
+            POSTMAN_PLUGIN_URL . 'assets/css/admin.css',
+            [],
+            POSTMAN_PLUGIN_VERSION
+        );
 
         $script_content = "
         function selectAll(name) {
@@ -367,48 +310,6 @@ class Postman_Admin {
         function deselectAllCustom(name) {
             document.querySelectorAll('input[name=\"custom_post_type_slugs[' + name + '][]\"]').forEach(checkbox => checkbox.checked = false);
         }
-
-        function selectAllAcf() {
-            document.querySelectorAll('input[name=\"acf_for_pages_list\"]').forEach(checkbox => checkbox.checked = true);
-            document.querySelectorAll('input[name=\"acf_for_posts_list\"]').forEach(checkbox => checkbox.checked = true);
-            document.querySelectorAll('input[name=\"acf_for_cpt_lists[]\"]').forEach(checkbox => {
-                var li = checkbox.closest('li');
-                if (li && li.style.display !== 'none') {
-                    checkbox.checked = true;
-                }
-            });
-        }
-
-        function deselectAllAcf() {
-            document.querySelectorAll('input[name=\"acf_for_pages_list\"]').forEach(checkbox => checkbox.checked = false);
-            document.querySelectorAll('input[name=\"acf_for_posts_list\"]').forEach(checkbox => checkbox.checked = false);
-            document.querySelectorAll('input[name=\"acf_for_cpt_lists[]\"]').forEach(checkbox => checkbox.checked = false);
-        }
-
-        function toggleAcfCptItems() {
-            document.querySelectorAll('.cpt-selector').forEach(function(cptCheckbox) {
-                var cptName = cptCheckbox.getAttribute('data-cpt');
-                var acfItem = document.querySelector('.acf-cpt-item[data-cpt=\"' + cptName + '\"]');
-                if (acfItem) {
-                    if (cptCheckbox.checked) {
-                        acfItem.style.display = '';
-                    } else {
-                        acfItem.style.display = 'none';
-                        var acfCptCheckbox = acfItem.querySelector('input[type=\"checkbox\"]');
-                        if (acfCptCheckbox) {
-                            acfCptCheckbox.checked = false;
-                        }
-                    }
-                }
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.cpt-selector').forEach(function(checkbox) {
-                checkbox.addEventListener('change', toggleAcfCptItems);
-            });
-            toggleAcfCptItems();
-        });
         ";
 
         wp_add_inline_script('jquery', $script_content);
@@ -419,16 +320,16 @@ class Postman_Admin {
         if (!current_user_can($this->get_required_capability()) || !check_admin_referer(self::NONCE_ACTION)) {
             wp_die(esc_html__('Insufficient permissions or invalid nonce.', 'mksddn-collection-for-postman'));
         }
+        $acf_active = Postman_Routes::is_acf_or_scf_active();
+        $selected_custom_post_types = $this->get_selected_custom_post_types();
+
         $selected_data = [
             'page_slugs' => $this->get_selected_page_slugs(),
             'post_slugs' => $this->get_selected_post_slugs(),
             'custom_slugs' => $this->get_selected_custom_slugs(),
             'options_pages' => $this->get_selected_options_pages(),
-            'category_slugs' => $this->get_selected_category_slugs(),
-            'custom_post_types' => $this->get_selected_custom_post_types(),
-            'acf_for_pages_list' => $this->get_acf_for_pages_list(),
-            'acf_for_posts_list' => $this->get_acf_for_posts_list(),
-            'acf_for_cpt_lists' => $this->get_acf_for_cpt_lists(),
+            'custom_post_types' => $selected_custom_post_types,
+            'include_woocommerce' => $this->get_include_woocommerce(),
         ];
 
         $generator = new Postman_Generator();
@@ -437,11 +338,12 @@ class Postman_Admin {
             $selected_data['post_slugs'],
             $selected_data['custom_slugs'],
             $selected_data['options_pages'],
-            $selected_data['category_slugs'],
             $selected_data['custom_post_types'],
-            $selected_data['acf_for_pages_list'],
-            $selected_data['acf_for_posts_list'],
-            $selected_data['acf_for_cpt_lists']
+            $acf_active,
+            $acf_active,
+            $acf_active ? $selected_custom_post_types : [],
+            $selected_data['include_woocommerce'],
+            $this->get_export_format()
         );
     }
 

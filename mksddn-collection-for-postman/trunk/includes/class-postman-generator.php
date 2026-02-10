@@ -2,8 +2,8 @@
 
 /**
  * @file: includes/class-postman-generator.php
- * @description: Build and export Postman Collection JSON structure.
- * @dependencies: Postman_Options, Postman_Routes
+ * @description: Build and export Postman Collection JSON and OpenAPI structure.
+ * @dependencies: Postman_Options, Postman_Routes, Postman_OpenAPI_Converter
  * @created: 2025-08-19
  */
 class Postman_Generator {
@@ -22,13 +22,17 @@ class Postman_Generator {
     }
 
 
-    public function generate_and_download(array $selected_page_slugs, array $selected_post_slugs, array $selected_custom_slugs, array $selected_options_pages, array $selected_category_slugs = [], array $selected_custom_post_types = [], bool $acf_for_pages_list = false, bool $acf_for_posts_list = false, array $acf_for_cpt_lists = []): void {
+    public function generate_and_download(array $selected_page_slugs, array $selected_post_slugs, array $selected_custom_slugs, array $selected_options_pages, array $selected_custom_post_types = [], bool $acf_for_pages_list = false, bool $acf_for_posts_list = false, array $acf_for_cpt_lists = [], bool $include_woocommerce = true, string $format = 'postman'): void {
         $post_types = get_post_types(['public' => true], 'objects');
-        $custom_post_types = $this->filter_custom_post_types($post_types);
+        $custom_post_types = Postman_Routes::filter_custom_post_types($post_types);
 
-        $collection = $this->build_collection($custom_post_types, $selected_page_slugs, $selected_category_slugs, $selected_custom_post_types, $acf_for_pages_list, $acf_for_posts_list, $acf_for_cpt_lists);
+        $collection = $this->build_collection($custom_post_types, $selected_page_slugs, $selected_custom_post_types, $acf_for_pages_list, $acf_for_posts_list, $acf_for_cpt_lists, $include_woocommerce);
 
-        $this->download_collection($collection);
+        if ($format === 'openapi') {
+            $this->download_openapi($collection);
+        } else {
+            $this->download_collection($collection);
+        }
     }
 
 
@@ -36,26 +40,23 @@ class Postman_Generator {
      * Build collection and return as array without sending download headers.
      * Intended for programmatic usage (e.g., WP-CLI).
      */
-    public function generate_collection_array(array $selected_page_slugs, array $selected_category_slugs = [], array $selected_custom_post_types = []): array {
+    public function generate_collection_array(array $selected_page_slugs, array $selected_custom_post_types = [], bool $include_woocommerce = true): array {
         $post_types = get_post_types(['public' => true], 'objects');
-        $custom_post_types = $this->filter_custom_post_types($post_types);
-        return $this->build_collection($custom_post_types, $selected_page_slugs, $selected_category_slugs, $selected_custom_post_types);
+        $custom_post_types = Postman_Routes::filter_custom_post_types($post_types);
+        $acf_active = Postman_Routes::is_acf_or_scf_active();
+        return $this->build_collection(
+            $custom_post_types,
+            $selected_page_slugs,
+            $selected_custom_post_types,
+            $acf_active,
+            $acf_active,
+            $acf_active ? $selected_custom_post_types : [],
+            $include_woocommerce
+        );
     }
 
 
-    private function filter_custom_post_types(array $post_types): array {
-        $custom_post_types = [];
-        foreach ($post_types as $post_type) {
-            if (!in_array($post_type->name, ['page', 'post', 'attachment'], true)) {
-                $custom_post_types[$post_type->name] = $post_type;
-            }
-        }
-
-        return $custom_post_types;
-    }
-
-
-    private function build_collection(array $custom_post_types, array $selected_page_slugs, array $selected_category_slugs = [], array $selected_custom_post_types = [], bool $acf_for_pages_list = false, bool $acf_for_posts_list = false, array $acf_for_cpt_lists = []): array {
+    private function build_collection(array $custom_post_types, array $selected_page_slugs, array $selected_custom_post_types = [], bool $acf_for_pages_list = false, bool $acf_for_posts_list = false, array $acf_for_cpt_lists = [], bool $include_woocommerce = true): array {
         $items = [];
 
         // Basic Routes
@@ -63,6 +64,14 @@ class Postman_Generator {
             'name' => 'Basic Routes',
             'item' => $this->routes_handler->get_basic_routes($acf_for_pages_list, $acf_for_posts_list),
         ];
+
+        // WooCommerce REST API (when active and selected)
+        if ($include_woocommerce) {
+            $wc_routes = $this->routes_handler->get_woocommerce_routes();
+            if ($wc_routes !== []) {
+                $items = array_merge($items, $wc_routes);
+            }
+        }
 
         // Options Pages
         $options_pages = $this->options_handler->get_options_pages();
@@ -95,15 +104,6 @@ class Postman_Generator {
         $individual_routes = $this->routes_handler->get_individual_page_routes($selected_page_slugs);
         $items = array_merge($items, $individual_routes);
 
-        // Posts by selected categories
-        $posts_by_categories = $this->routes_handler->get_posts_by_categories_routes($selected_category_slugs);
-        if ($posts_by_categories !== []) {
-            $items[] = [
-                'name' => 'Posts by Categories',
-                'item' => $posts_by_categories,
-            ];
-        }
-
         $collection = [
             'info' => $this->get_collection_info(),
             'item' => $items,
@@ -132,6 +132,10 @@ class Postman_Generator {
     private function download_collection(array $collection): void {
         $json = wp_json_encode($collection, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
+        if ($json === false) {
+            wp_die(esc_html__('Failed to generate collection.', 'mksddn-collection-for-postman'));
+        }
+
         /**
          * Filter the exported filename for the collection download.
          *
@@ -145,9 +149,46 @@ class Postman_Generator {
         header('Content-Length: ' . strlen($json));
 
         // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Output is a JSON string for download.
-        echo wp_json_encode($collection, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        echo $json;
         exit;
     }
 
+
+    /**
+     * Convert collection to OpenAPI 3.0 spec and send download headers.
+     */
+    private function download_openapi(array $collection): void {
+        $converter = new Postman_OpenAPI_Converter();
+        $spec = $converter->convert($collection);
+
+        $json = wp_json_encode($spec, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+        if ($json === false) {
+            wp_die(esc_html__('Failed to generate OpenAPI specification.', 'mksddn-collection-for-postman'));
+        }
+
+        $filename = (string) apply_filters('mksddn_postman_openapi_filename', 'openapi.json', $spec, $collection);
+
+        header('Content-Type: application/json');
+        header('Content-Disposition: attachment; filename="' . esc_attr($filename) . '"');
+        header('Content-Length: ' . strlen($json));
+
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Output is a JSON string for download.
+        echo $json;
+        exit;
+    }
+
+
+    /**
+     * Generate OpenAPI 3.0 spec array from collection.
+     * Intended for programmatic usage (e.g., WP-CLI).
+     *
+     * @param array $collection Postman collection array
+     * @return array OpenAPI 3.0 specification
+     */
+    public function generate_openapi_array(array $collection): array {
+        $converter = new Postman_OpenAPI_Converter();
+        return $converter->convert($collection);
+    }
 
 }

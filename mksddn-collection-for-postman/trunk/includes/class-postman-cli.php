@@ -2,12 +2,9 @@
 
 /**
  * @file: includes/class-postman-cli.php
- * @description: WP-CLI command to export Postman Collection JSON for the plugin.
+ * @description: WP-CLI commands to export Postman Collection JSON and OpenAPI spec.
  * @dependencies: Postman_Generator
  * @created: 2025-08-19
- */
-/**
- * WP-CLI commands for MksDdn Collection for Postman.
  */
 class Postman_CLI {
 
@@ -22,20 +19,29 @@ class Postman_CLI {
      * [--pages=<slugs>]
      * : Comma-separated page slugs to include as individual requests.
      *
+     * [--cpt=<types>]
+     * : Comma-separated custom post types to include.
+     *
+     * [--include-woocommerce=<yes|no>]
+     * : Include WooCommerce REST API when active. Default: yes.
+     *
      * ## EXAMPLES
      *     wp mksddn-collection-for-postman export --file=postman_collection.json
-     *     wp mksddn-collection-for-postman export --pages=home,about
+     *     wp mksddn-collection-for-postman export --pages=home,about --include-woocommerce=no
      */
     public function export(array $args, array $assoc_args): void {
-        $pages_param = isset($assoc_args['pages']) ? (string) $assoc_args['pages'] : '';
-        $page_slugs = $pages_param !== ''
-            ? array_values(array_filter(array_map('sanitize_title', explode(',', $pages_param))))
-            : [];
+        $page_slugs = $this->parse_slugs($assoc_args['pages'] ?? '');
+        $cpt = $this->parse_cpt($assoc_args['cpt'] ?? '');
+        $include_woocommerce = $this->parse_include_woocommerce($assoc_args['include-woocommerce'] ?? 'yes');
 
         $generator = new Postman_Generator();
-        $collection = $generator->generate_collection_array($page_slugs);
+        $collection = $generator->generate_collection_array($page_slugs, $cpt, $include_woocommerce);
 
-        $json = json_encode($collection, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $json = wp_json_encode($collection, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        if ($json === false) {
+            WP_CLI::error('Failed to encode collection.');
+            return;
+        }
 
         if (isset($assoc_args['file']) && $assoc_args['file'] !== '') {
             $file = (string) $assoc_args['file'];
@@ -48,8 +54,79 @@ class Postman_CLI {
             return;
         }
 
-        // Print to STDOUT
         WP_CLI::line($json);
+    }
+
+
+    /**
+     * Export OpenAPI 3.0 specification to a file or STDOUT.
+     *
+     * ## OPTIONS
+     *
+     * [--file=<path>]
+     * : Output file path. If omitted, prints to STDOUT.
+     *
+     * [--pages=<slugs>]
+     * : Comma-separated page slugs to include as individual requests.
+     *
+     * [--cpt=<types>]
+     * : Comma-separated custom post types to include.
+     *
+     * [--include-woocommerce=<yes|no>]
+     * : Include WooCommerce REST API when active. Default: yes.
+     *
+     * ## EXAMPLES
+     *     wp mksddn-collection-for-postman export-openapi --file=openapi.json
+     *     wp mksddn-collection-for-postman export-openapi --pages=home,about --include-woocommerce=no
+     */
+    public function export_openapi(array $args, array $assoc_args): void {
+        $page_slugs = $this->parse_slugs($assoc_args['pages'] ?? '');
+        $cpt = $this->parse_cpt($assoc_args['cpt'] ?? '');
+        $include_woocommerce = $this->parse_include_woocommerce($assoc_args['include-woocommerce'] ?? 'yes');
+
+        $generator = new Postman_Generator();
+        $collection = $generator->generate_collection_array($page_slugs, $cpt, $include_woocommerce);
+        $spec = $generator->generate_openapi_array($collection);
+
+        $json = wp_json_encode($spec, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        if ($json === false) {
+            WP_CLI::error('Failed to encode OpenAPI spec.');
+            return;
+        }
+
+        if (isset($assoc_args['file']) && $assoc_args['file'] !== '') {
+            $file = (string) $assoc_args['file'];
+            $result = file_put_contents($file, $json);
+            if ($result === false) {
+                WP_CLI::error('Failed to write file.');
+                return;
+            }
+            WP_CLI::success('OpenAPI spec exported to ' . $file);
+            return;
+        }
+
+        WP_CLI::line($json);
+    }
+
+
+    private function parse_include_woocommerce(string $param): bool {
+        return strtolower($param) !== 'no' && strtolower($param) !== '0';
+    }
+
+
+    private function parse_slugs(string $param): array {
+        if ($param === '') {
+            return [];
+        }
+        return array_values(array_filter(array_map('sanitize_title', explode(',', $param))));
+    }
+
+
+    private function parse_cpt(string $param): array {
+        if ($param === '') {
+            return [];
+        }
+        return array_values(array_filter(array_map('sanitize_key', explode(',', $param))));
     }
 }
 

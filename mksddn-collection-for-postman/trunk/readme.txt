@@ -1,25 +1,26 @@
 === MksDdn Collection for Postman ===
 Contributors: mksddn
-Tags: rest api, postman, collection, developer-tools
+Tags: rest api, postman, collection, openapi, developer-tools
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.1.0
+Stable tag: 2.0.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Generate a Postman Collection (v2.1.0) for the WordPress REST API from the admin UI.
+Generate Postman Collection (v2.1.0) or OpenAPI 3.0 documentation for the WordPress REST API from the admin UI.
 
 == Description ==
-MksDdn Collection for Postman helps developers quickly generate a Postman Collection (v2.1.0) for WordPress REST API endpoints. The plugin automatically discovers and includes standard WordPress entities, custom post types, options pages, and individual pages. Generated collections include pre-configured requests with sample data and can be downloaded as JSON files for import into Postman.
+MksDdn Collection for Postman helps developers quickly generate a Postman Collection (v2.1.0) or OpenAPI 3.0 documentation for WordPress REST API endpoints. The plugin automatically discovers and includes standard WordPress entities, custom post types, options pages, and individual pages. Generated collections include pre-configured requests with sample data and can be downloaded as JSON files for import into Postman. OpenAPI spec can be used with Swagger UI, Redoc, or frontend code generators.
 
 The plugin provides comprehensive API testing capabilities with automatic generation of test data for form submissions, support for file uploads via multipart/form-data, and seamless integration with Advanced Custom Fields (ACF). Special handling is included for the mksddn-forms-handler plugin when active.
 
 Features:
 - Basic REST endpoints: pages, posts, categories, tags, taxonomies, comments, users, settings
+- WooCommerce REST API (wc/v3): products, product categories, orders with full CRUD when WooCommerce is active
 - Search functionality: Posts, Pages, and All content types with customizable queries
 - Custom Post Types with full CRUD operations (List, Get by Slug/ID, Create, Update, Delete)
-- ACF fields support for lists: pages, posts, and Custom Post Types (optional per type)
+- ACF/SCF fields: auto-included for all post types when ACF or Smart Custom Fields plugin is active
 - Special handling for Forms (mksddn-forms-handler integration)
 - Options endpoints: `/wp-json/custom/v1/options/...`
 - Individual pages by slug with ACF field support
@@ -27,6 +28,7 @@ Features:
 - Support for multipart/form-data for file uploads
 - Yoast SEO integration (automatic yoast_head_json inclusion)
 - Multilingual support with Accept-Language headers (Polylang priority)
+- OpenAPI 3.0 export for API documentation (Swagger UI, Redoc)
 - Extensible via WordPress filters
 - WP-CLI integration for command-line usage
 
@@ -39,31 +41,38 @@ Features:
 = Does it support multisite? =
 Yes. It works at the site level. Network-specific screens are not required.
 
+= Does it support WooCommerce? =
+Yes. When WooCommerce is active, the plugin adds a WooCommerce folder with products, product categories, and orders endpoints. Set collection variables wcConsumerKey and wcConsumerSecret (from WooCommerce > Settings > Advanced > REST API).
+
 = Does it require ACF? =
 No. It supports ACF fields if present for pages and posts, but it does not require ACF to work.
 
 = Is there a WP-CLI command? =
 Yes. The plugin includes WP-CLI integration for command-line usage:
 
-Export to file:
+Postman export:
 `wp mksddn-collection-for-postman export --file=postman_collection.json`
+`wp mksddn-collection-for-postman export --pages=home,about --cpt=product`
 
-Print to stdout:
-`wp mksddn-collection-for-postman export --pages=home,about`
-
-Export with specific pages:
-`wp mksddn-collection-for-postman export --file=my_collection.json --pages=home,about,contact`
+OpenAPI export:
+`wp mksddn-collection-for-postman export-openapi --file=openapi.json`
+`wp mksddn-collection-for-postman export-openapi --pages=home,about`
 
 = Does it support ACF fields? =
-Yes. The plugin automatically includes ACF field support in requests for individual pages and posts. Additionally, you can optionally enable ACF fields for list endpoints (pages list, posts list, and Custom Post Types lists) through the admin interface. When generating requests, it adds `acf_format=standard` parameter and includes ACF fields in the `_fields` parameter.
+Yes. When ACF (Advanced Custom Fields) or SCF (Smart Custom Fields) plugin is active, ACF fields are automatically included for all post types (pages, posts, CPT) in both list and single-item requests. When the plugin is not installed, ACF fields are omitted from the response.
 
 = Does it support file uploads in forms? =
 Yes. When forms contain file fields, the plugin automatically generates multipart/form-data requests with proper file handling. For forms without files, it uses standard JSON requests.
 
+= Can I export OpenAPI documentation? =
+Yes. Select "OpenAPI 3.0 (JSON)" in the admin export format options, or use WP-CLI: `wp mksddn-collection-for-postman export-openapi --file=openapi.json`. The generated spec is compatible with Swagger UI, Redoc, and code generators.
+
 = Can I customize the generated collection? =
 Yes. The plugin provides WordPress filters for customization:
 - `mksddn_postman_collection` - Modify the entire collection structure
-- `mksddn_postman_filename` - Customize the download filename
+- `mksddn_postman_filename` - Customize the Postman download filename
+- `mksddn_postman_openapi_spec` - Modify OpenAPI specification before export
+- `mksddn_postman_openapi_filename` - Customize OpenAPI download filename
 - `mksddn_postman_capability` - Change required user capability
 
 == External services ==
@@ -84,6 +93,15 @@ Note: This plugin does not send any user data to external services. The schema r
 1. Admin screen with page selection and download button.
 
 == Changelog ==
+= 2.0.0 =
+- New: OpenAPI 3.0 export (Swagger UI, Redoc)
+- New: WooCommerce REST API support with admin checkbox and Basic Auth
+- New: Unified block styles for admin export page
+- Changed: Removed category selection (Posts by Categories)
+- New: CLI option `--include-woocommerce` for export commands
+- Refactor: Centralized CPT filtering in Postman_Routes
+- Fixed: JSON encoding error handling in download and CLI
+
 = 1.1.0 =
 - New: Custom Post Types support with full CRUD operations (List, Get by Slug/ID, Create, Update, Delete)
 - New: Admin UI section for selecting Custom Post Types to include in collection

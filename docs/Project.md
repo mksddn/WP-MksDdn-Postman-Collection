@@ -7,37 +7,47 @@
 
 ### MksDdn Postman Collection — проектная документация
 
-**Цель**: предоставить удобный способ генерировать Postman Collection для REST API WordPress-сайта из админки и использовать плагин как независимый пакет, распространяемый через WordPress.org SVN и обновляемый по стандартному механизму.
+**Цель**: предоставить удобный способ генерировать Postman Collection и OpenAPI 3.0 документацию для REST API WordPress-сайта из админки и использовать плагин как независимый пакет, распространяемый через WordPress.org SVN и обновляемый по стандартному механизму.
 
 Ссылка на стандарты WordPress плагинов: [Plugin Handbook](https://developer.wordpress.org/plugins/).
 
 ### Область применения
 - Генерация Postman Collection v2.1.0 по публичным REST-маршрутам WordPress, в том числе:
   - базовые сущности WP (`pages`, `posts`, `categories`, `tags`, `taxonomies`, `comments`, `users`, `settings`)
+  - WooCommerce REST API (wc/v3): `products`, `products/categories`, `orders` — при активном плагине WooCommerce
   - поиск по контенту (`search` с поддержкой фильтрации по типам)
   - пользовательские типы записей (CPT), включая специальные маршруты для `forms`
   - страницы опций (эндпоинты вида `/wp-json/custom/v1/options/...`)
   - индивидуально выбранные страницы по слагам
-  - выбор категорий и автоматические запросы постов по выбранным категориям
   - выбор Custom Post Types для включения в коллекцию
   - опциональное включение ACF полей в запросы списков (List of pages, List of posts, List of CPT) через чекбоксы в админке
 - Автоматическое включение SEO-данных Yoast (`yoast_head_json`) в параметр `_fields` для pages и posts при активном плагине Yoast SEO
 - Поддержка многоязычности через заголовок `Accept-Language` во всех GET-запросах
-- Скачивание JSON-файла коллекции из админки.
+- Скачивание JSON-файла коллекции (Postman) или OpenAPI 3.0 спецификации из админки.
 
 ### Архитектура и компоненты
 - Пакет плагина: `mksddn-postman-collection/`
   - `postman-collection.php` — точка входа плагина (инициализация, константы, автозагрузка, регистрация хуков)
-  - `includes/class-postman-admin.php` — админ-интерфейс: страница, форма выбора (страницы, категории и Custom Post Types), обработчик `admin_post_*`
-  - `includes/class-postman-generator.php` — сборка структуры коллекции и выдача JSON на скачивание (принимает выбранные страницы, категории и Custom Post Types)
+  - `includes/class-postman-admin.php` — админ-интерфейс: страница, форма выбора (страницы, категории и Custom Post Types), выбор формата экспорта (Postman/OpenAPI), обработчик `admin_post_*`
+  - `assets/css/admin.css` — унифицированные стили блоков страницы экспорта. Структура блока: `postman-admin-block` (обёртка), `postman-admin-block__title`, `postman-admin-block__actions` (кнопки), `postman-admin-block__content` (варианты: `--scrollable` для списков, `--options` для чекбоксов/радио), `postman-admin-block__description`. Новый блок: `render_block_start()` → контент → `render_block_end()`.
+  - `includes/class-postman-generator.php` — сборка структуры коллекции, выдача Postman JSON или OpenAPI 3.0 на скачивание
+  - `includes/class-postman-openapi-converter.php` — конвертация Postman Collection в OpenAPI 3.0; параметры, пагинация (X-WP-Total, X-WP-TotalPages), auth; ссылки на https://developer.wordpress.org/rest-api/
+  - `includes/class-postman-openapi-schemas.php` — OpenAPI schemas для WP сущностей (Post, Page, Term, User, Comment, Error) с ссылками на Reference; security schemes по https://developer.wordpress.org/rest-api/using-the-rest-api/authentication/
+  - `includes/class-postman-param-descriptions.php` — централизованные описания query/header/request body параметров для Postman и OpenAPI
   - `includes/class-postman-options.php` — извлечение и кэширование страниц опций через REST server и роуты
-  - `includes/class-postman-routes.php` — генерация маршрутов для базовых сущностей, CPT, форм, индивидуальных страниц и списка постов по выбранным категориям
+  - `includes/class-postman-routes.php` — генерация маршрутов для базовых сущностей, CPT, форм, индивидуальных страниц
 
 Примечание по интеграции с формами:
 - Если установлен и активен плагин `mksddn-forms-handler`, коллекция для форм использует namespace `mksddn-forms-handler/v1` и пути `wp-json/mksddn-forms-handler/v1/forms` для list и submit; иначе — стандартные `wp/v2/forms`.
  - Для каждой формы добавляются два роута:
    - GET `wp-json/mksddn-forms-handler/v1/forms/{slug}` — получение информации о форме
    - POST `wp-json/mksddn-forms-handler/v1/forms/{slug}/submit` — отправка данных формы (тело запроса заполняется автогенерируемыми примерами значений)
+
+Примечание по интеграции с WooCommerce:
+- При активном плагине WooCommerce в коллекцию добавляется папка "WooCommerce" с маршрутами: Products (List, by ID, Create, Update, Delete), Product Categories (аналогично), Orders (аналогично)
+- Аутентификация: HTTP Basic Auth (Consumer Key + Consumer Secret). Ключи создаются в WooCommerce > Settings > Advanced > REST API
+- Переменные коллекции: `wcConsumerKey`, `wcConsumerSecret`, `ProductID`, `ProductCategoryID`, `OrderID`
+- CPT `product` исключается из списка Custom Post Types (маршруты уже в папке WooCommerce)
 
 Примечание по интеграции с Yoast SEO:
 - Если установлен и активен плагин Yoast SEO (`wordpress-seo/wp-seo.php`), параметр `_fields` для pages и posts автоматически дополняется значением `yoast_head_json`
@@ -66,13 +76,9 @@
 - Значения по умолчанию: `page=1`, `per_page=10`
 - Параметры пагинации добавляются для всех сущностей, поддерживающих пагинацию в WordPress REST API (posts, pages, categories, tags, comments, users, CPT), за исключением `settings`
 
-Примечание по ACF полям для списков:
-- На странице создания коллекции добавлены чекбоксы для опционального включения ACF полей в запросы списков:
-  - "Add ACF fields for LIST of pages" — добавляет параметры `acf_format=standard` и включает `acf` в `_fields` для запроса "List of Pages"
-  - "Add ACF fields for LIST of posts" — добавляет параметры `acf_format=standard` и включает `acf` в `_fields` для запроса "List of Posts"
-  - "Add ACF fields for LIST of [CPT name]" — для каждого доступного Custom Post Type добавляет аналогичные параметры для запроса "List of [CPT]"
-- Чекбоксы по умолчанию выключены, что соответствует текущему поведению (ACF поля добавляются только для индивидуальных запросов по слагу или ID)
-- При включении соответствующего чекбокса в запрос списка добавляются параметры `acf_format=standard` и поле `acf` включается в параметр `_fields`
+Примечание по ACF/SCF полям:
+- Если установлен плагин ACF (Advanced Custom Fields) или SCF (Smart Custom Fields), параметры `acf_format=standard` и поле `acf` в `_fields` автоматически включаются для всех типов записей (pages, posts, CPT) — для списков и для одиночных записей по slug/ID
+- Если плагин не установлен, ACF-поля в ответах не добавляются
 
 Примеры генерации тестовых данных для полей форм:
 - Поддерживаются типы: `text`, `email`, `password`, `tel`, `url`, `number` (учёт `min`/`max`/`step`), `date`, `time`, `datetime-local`, `textarea`, `checkbox`, `radio`, `select` (включая `multiple`), `file` (включая `multiple`).
@@ -92,6 +98,8 @@ flowchart TD
   C --> E[Postman_Options]
   D --> F[Collection JSON]
   E --> D
+  C -->|openapi| G[OpenAPI_Converter]
+  G --> H[OpenAPI 3.0 JSON]
 ```
 
 ### Точки расширения и интеграции
@@ -102,7 +110,9 @@ flowchart TD
 - В планах: добавить собственные фильтры для модификации элементов коллекции и переменных (см. дорожную карту).
  - Добавлены фильтры расширения:
    - `mksddn_postman_collection` — модификация финального массива коллекции
-   - `mksddn_postman_filename` — переопределение имени экспортируемого файла
+   - `mksddn_postman_filename` — переопределение имени экспортируемого файла Postman
+   - `mksddn_postman_openapi_spec` — модификация OpenAPI 3.0 спецификации перед экспортом
+   - `mksddn_postman_openapi_filename` — переопределение имени файла OpenAPI
 
 ### Требования и совместимость
 - Требования:
