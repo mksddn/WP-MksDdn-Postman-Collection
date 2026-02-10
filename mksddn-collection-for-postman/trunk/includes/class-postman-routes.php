@@ -120,38 +120,144 @@ class Postman_Routes {
      */
     private function get_default_headers(): array {
         $language = $this->get_default_language();
-        
-        // Convert WordPress locale format (ru_RU) to RFC 5646 format (ru-RU)
         $accept_language = str_replace('_', '-', $language);
-        
-        return [
+
+        $headers = [
             [
                 'key'      => 'Accept-Language',
                 'value'    => $accept_language,
                 'disabled' => true,
             ],
         ];
+        Postman_Param_Descriptions::enrich_headers($headers);
+        return $headers;
     }
 
 
     /**
      * Get pagination query parameters (page and per_page) for list requests.
+     * Per https://developer.wordpress.org/rest-api/using-the-rest-api/pagination/
      *
      * @return array
      */
     private function get_pagination_params(): array {
-        return [
+        $params = [
+            ['key' => 'page', 'value' => '1', 'disabled' => true],
+            ['key' => 'per_page', 'value' => '10', 'disabled' => true],
+            ['key' => 'offset', 'value' => '0', 'disabled' => true],
+        ];
+        Postman_Param_Descriptions::enrich_query_params($params);
+        return $params;
+    }
+
+
+    /**
+     * Get WP REST API global params for list/collection endpoints.
+     * Per https://developer.wordpress.org/rest-api/using-the-rest-api/global-parameters/
+     *
+     * @param string $entity Entity type (posts, pages, categories, tags, comments, users).
+     * @return array
+     */
+    private function get_wp_list_extra_params(string $entity): array {
+        $params = [
             [
-                'key'      => 'page',
-                'value'    => '1',
-                'disabled' => true,
+                'key'       => 'context',
+                'value'     => 'view',
+                'disabled'  => true,
             ],
             [
-                'key'      => 'per_page',
-                'value'    => '10',
-                'disabled' => true,
+                'key'       => 'search',
+                'value'     => '',
+                'disabled'  => true,
+            ],
+            [
+                'key'       => 'order',
+                'value'     => 'desc',
+                'disabled'  => true,
+            ],
+            [
+                'key'       => 'orderby',
+                'value'     => 'date',
+                'disabled'  => true,
+            ],
+            [
+                'key'       => '_embed',
+                'value'     => '',
+                'disabled'  => true,
             ],
         ];
+        if (in_array($entity, ['posts', 'pages'], true)) {
+            array_splice($params, 2, 0, [[
+                'key'      => 'status',
+                'value'   => 'publish',
+                'disabled' => true,
+            ]]);
+        }
+        Postman_Param_Descriptions::enrich_query_params($params);
+        return $params;
+    }
+
+
+    /**
+     * Get WP REST API global params for single item GET (by slug/ID).
+     *
+     * @return array
+     */
+    private function get_wp_get_extra_params(): array {
+        $params = [
+            ['key' => 'context', 'value' => 'view', 'disabled' => true],
+            ['key' => '_embed', 'value' => '', 'disabled' => true],
+        ];
+        Postman_Param_Descriptions::enrich_query_params($params);
+        return $params;
+    }
+
+
+    /**
+     * Get WP REST API params for DELETE (force=true bypasses Trash).
+     * Per https://developer.wordpress.org/rest-api/reference/posts/#delete-a-post
+     *
+     * @return array
+     */
+    private function get_wp_delete_params(): array {
+        $params = [
+            ['key' => 'force', 'value' => 'false', 'disabled' => true],
+        ];
+        Postman_Param_Descriptions::enrich_query_params($params);
+        return $params;
+    }
+
+
+    /**
+     * Build search query params with descriptions. Type: post, page, or null for all.
+     */
+    private function build_search_query(?string $type): array {
+        $params = [
+            ['key' => 'search', 'value' => 'example'],
+            ['key' => '_fields', 'value' => $this->get_search_fields_param()],
+            ['key' => 'context', 'value' => 'view', 'disabled' => true],
+            ['key' => '_embed', 'value' => '', 'disabled' => true],
+        ];
+        if ($type !== null) {
+            array_unshift($params, ['key' => 'type', 'value' => $type]);
+        }
+        Postman_Param_Descriptions::enrich_query_params($params);
+        return $params;
+    }
+
+
+    /**
+     * Get auth headers for POST/PUT/PATCH/DELETE. X-WP-Nonce for same-origin.
+     * Per https://developer.wordpress.org/rest-api/using-the-rest-api/authentication/
+     *
+     * @return array
+     */
+    private function get_auth_headers(): array {
+        $headers = [
+            ['key' => 'X-WP-Nonce', 'value' => '{{wpNonce}}', 'disabled' => true],
+        ];
+        Postman_Param_Descriptions::enrich_headers($headers);
+        return $headers;
     }
 
 
@@ -214,11 +320,12 @@ class Postman_Routes {
                 ];
             }
             
-            // Add pagination parameters for entities that support pagination (exclude 'settings')
             if ($entity !== 'settings') {
+                $query_params = array_merge($query_params, $this->get_wp_list_extra_params($entity));
                 $query_params = array_merge($query_params, $this->get_pagination_params());
             }
-            
+            Postman_Param_Descriptions::enrich_query_params($query_params);
+
             // Build raw URL
             $raw_url = '{{baseUrl}}/wp-json/wp/v2/' . $entity;
             if ($entity === 'posts') {
@@ -259,6 +366,22 @@ class Postman_Routes {
             ];
 
             // Get by Slug
+            $slug_query = array_merge(
+                in_array($entity, ['pages', 'posts'])
+                    ? [
+                        ['key' => 'slug', 'value' => ($entity === 'pages' ? 'sample-page' : 'hello-world')],
+                        ['key' => 'acf_format', 'value' => 'standard'],
+                        ['key' => '_fields', 'value' => $this->get_detailed_fields_param()],
+                    ]
+                    : ($entity === 'categories'
+                        ? [
+                            ['key' => 'slug', 'value' => 'uncategorized'],
+                            ['key' => 'parent', 'value' => '1', 'disabled' => true],
+                        ]
+                        : [['key' => 'slug', 'value' => 'example']]),
+                $this->get_wp_get_extra_params()
+            );
+            Postman_Param_Descriptions::enrich_query_params($slug_query);
             $folder_items[] = [
                 'name'    => $singular . ' by Slug',
                 'request' => [
@@ -272,47 +395,25 @@ class Postman_Routes {
                         ),
                         'host'  => ['{{baseUrl}}'],
                         'path'  => ['wp-json', 'wp', 'v2', $entity],
-                        'query' => (
-                            in_array($entity, ['pages', 'posts'])
-                            ? [
-                                [
-                                    'key'   => 'slug',
-                                    'value' => ($entity === 'pages' ? 'sample-page' : 'hello-world'),
-                                ],
-                                [
-                                    'key'   => 'acf_format',
-                                    'value' => 'standard',
-                                ],
-                                [
-                                    'key'   => '_fields',
-                                    'value' => $this->get_detailed_fields_param(),
-                                ],
-                            ]
-                            : ($entity === 'categories'
-                            ? [
-                                [
-                                    'key'   => 'slug',
-                                    'value' => 'uncategorized',
-                                ],
-                                [
-                                    'key'      => 'parent',
-                                    'value'    => '1',
-                                    'disabled' => true,
-                                ],
-                            ]
-                            : [
-                                [
-                                    'key'   => 'slug',
-                                    'value' => 'example',
-                                ],
-                            ])
-                        ),
+                        'query' => $slug_query,
                     ],
                     'description' => sprintf('Get specific %s by slug', $singular) . (in_array($entity, ['pages', 'posts']) ? ' with ACF fields' : ''),
                 ],
             ];
 
             // Get by ID
+            $id_query = array_merge(
+                in_array($entity, ['pages', 'posts'])
+                    ? [
+                        ['key' => 'acf_format', 'value' => 'standard'],
+                        ['key' => '_fields', 'value' => $this->get_detailed_fields_param()],
+                    ]
+                    : ($entity === 'categories'
+                        ? [['key' => 'parent', 'value' => '1', 'disabled' => true]]
+                        : []),
+                $this->get_wp_get_extra_params()
+            );
+            Postman_Param_Descriptions::enrich_query_params($id_query);
             $folder_items[] = [
                 'name'    => $singular . ' by ID',
                 'request' => [
@@ -326,28 +427,7 @@ class Postman_Routes {
                         ),
                         'host'  => ['{{baseUrl}}'],
                         'path'  => ['wp-json', 'wp', 'v2', $entity, '{{' . $singular . 'ID}}'],
-                        'query' => (
-                            in_array($entity, ['pages', 'posts'])
-                            ? [
-                                [
-                                    'key'   => 'acf_format',
-                                    'value' => 'standard',
-                                ],
-                                [
-                                    'key'   => '_fields',
-                                    'value' => $this->get_detailed_fields_param(),
-                                ],
-                            ]
-                            : ($entity === 'categories'
-                            ? [
-                                [
-                                    'key'      => 'parent',
-                                    'value'    => '1',
-                                    'disabled' => true,
-                                ],
-                            ]
-                            : [])
-                        ),
+                        'query' => $id_query,
                     ],
                     'description' => sprintf('Get specific %s by ID', $singular) . (in_array($entity, ['pages', 'posts']) ? ' with ACF fields' : ''),
                 ],
@@ -358,12 +438,10 @@ class Postman_Routes {
                 'name'    => 'Create ' . $singular,
                 'request' => [
                     'method'      => 'POST',
-                    'header'      => [
-                        [
-                            'key'   => 'Content-Type',
-                            'value' => 'application/json',
-                        ],
-                    ],
+                    'header'      => array_merge(
+                        $this->get_auth_headers(),
+                        [['key' => 'Content-Type', 'value' => 'application/json']]
+                    ),
                     'body'        => [
                         'mode' => 'raw',
                         'raw'  => wp_json_encode(
@@ -390,12 +468,10 @@ class Postman_Routes {
                 'name'    => 'Update ' . $singular,
                 'request' => [
                     'method'      => 'POST',
-                    'header'      => [
-                        [
-                            'key'   => 'Content-Type',
-                            'value' => 'application/json',
-                        ],
-                    ],
+                    'header'      => array_merge(
+                        $this->get_auth_headers(),
+                        [['key' => 'Content-Type', 'value' => 'application/json']]
+                    ),
                     'body'        => [
                         'mode' => 'raw',
                         'raw'  => wp_json_encode(
@@ -421,13 +497,14 @@ class Postman_Routes {
                 'name'    => 'Delete ' . $singular,
                 'request' => [
                     'method'      => 'DELETE',
-                    'header'      => [],
+                    'header'      => $this->get_auth_headers(),
                     'url'         => [
-                        'raw'  => sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $entity) . $singular . 'ID}}',
-                        'host' => ['{{baseUrl}}'],
-                        'path' => ['wp-json', 'wp', 'v2', $entity, '{{' . $singular . 'ID}}'],
+                        'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $entity) . $singular . 'ID}}',
+                        'host'  => ['{{baseUrl}}'],
+                        'path'  => ['wp-json', 'wp', 'v2', $entity, '{{' . $singular . 'ID}}'],
+                        'query' => $this->get_wp_delete_params(),
                     ],
-                    'description' => sprintf('Delete %s by ID', $singular),
+                    'description' => sprintf('Delete %s by ID. Add ?force=true to bypass Trash.', $singular),
                 ],
             ];
 
@@ -450,20 +527,7 @@ class Postman_Routes {
                             'raw'   => '{{baseUrl}}/wp-json/wp/v2/search?search=example&type=post&_fields=' . $this->get_search_fields_param(),
                             'host'  => ['{{baseUrl}}'],
                             'path'  => ['wp-json', 'wp', 'v2', 'search'],
-                            'query' => [
-                                [
-                                    'key'   => 'search',
-                                    'value' => 'example',
-                                ],
-                                [
-                                    'key'   => 'type',
-                                    'value' => 'post',
-                                ],
-                                [
-                                    'key'   => '_fields',
-                                    'value' => $this->get_search_fields_param(),
-                                ],
-                            ],
+                            'query' => $this->build_search_query('post'),
                         ],
                         'description' => 'Search for posts with keyword "example"',
                     ],
@@ -477,20 +541,7 @@ class Postman_Routes {
                             'raw'   => '{{baseUrl}}/wp-json/wp/v2/search?search=example&type=page&_fields=' . $this->get_search_fields_param(),
                             'host'  => ['{{baseUrl}}'],
                             'path'  => ['wp-json', 'wp', 'v2', 'search'],
-                            'query' => [
-                                [
-                                    'key'   => 'search',
-                                    'value' => 'example',
-                                ],
-                                [
-                                    'key'   => 'type',
-                                    'value' => 'page',
-                                ],
-                                [
-                                    'key'   => '_fields',
-                                    'value' => $this->get_search_fields_param(),
-                                ],
-                            ],
+                            'query' => $this->build_search_query('page'),
                         ],
                         'description' => 'Search for pages with keyword "example"',
                     ],
@@ -504,16 +555,7 @@ class Postman_Routes {
                             'raw'   => '{{baseUrl}}/wp-json/wp/v2/search?search=example&_fields=' . $this->get_search_fields_param(),
                             'host'  => ['{{baseUrl}}'],
                             'path'  => ['wp-json', 'wp', 'v2', 'search'],
-                            'query' => [
-                                [
-                                    'key'   => 'search',
-                                    'value' => 'example',
-                                ],
-                                [
-                                    'key'   => '_fields',
-                                    'value' => $this->get_search_fields_param(),
-                                ],
-                            ],
+                            'query' => $this->build_search_query(null),
                         ],
                         'description' => 'Search across all content types with keyword "example"',
                     ],
@@ -943,15 +985,38 @@ class Postman_Routes {
             'key'   => '_fields',
             'value' => $fields_param,
         ];
-        
-        // Add pagination parameters
+        $query_params = array_merge($query_params, $this->get_wp_list_extra_params($rest_base));
         $query_params = array_merge($query_params, $this->get_pagination_params());
-        
+        Postman_Param_Descriptions::enrich_query_params($query_params);
+
         $raw_url = sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s&page=1&per_page=10', $rest_base, $fields_param);
         if ($add_acf) {
             $raw_url = sprintf('{{baseUrl}}/wp-json/wp/v2/%s?_fields=%s&acf_format=standard&page=1&per_page=10', $rest_base, $fields_param);
         }
         
+        $cpt_slug_query = array_merge(
+            in_array($post_type_name, ['pages', 'posts'], true)
+                ? [
+                    ['key' => 'slug', 'value' => ($post_type_name === 'pages' ? 'sample-page' : 'hello-world')],
+                    ['key' => 'acf_format', 'value' => 'standard'],
+                    ['key' => '_fields', 'value' => $this->get_detailed_fields_param()],
+                ]
+                : [['key' => 'slug', 'value' => 'example']],
+            $this->get_wp_get_extra_params()
+        );
+        Postman_Param_Descriptions::enrich_query_params($cpt_slug_query);
+
+        $cpt_id_query = array_merge(
+            in_array($post_type_name, ['pages', 'posts'], true)
+                ? [
+                    ['key' => 'acf_format', 'value' => 'standard'],
+                    ['key' => '_fields', 'value' => $this->get_detailed_fields_param()],
+                ]
+                : [],
+            $this->get_wp_get_extra_params()
+        );
+        Postman_Param_Descriptions::enrich_query_params($cpt_id_query);
+
         return [[
             'name'    => 'List of ' . ucfirst($post_type_name),
             'request' => [
@@ -973,36 +1038,14 @@ class Postman_Routes {
                 'url'         => [
                     'raw'   => (
                         in_array($post_type_name, ['pages', 'posts'], true)
-                        ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=', $post_type_name) . ($post_type_name === 'pages' ? 'sample-page' : 'hello-world') . '&acf_format=standard&_fields=' . $this->get_detailed_fields_param()
-                        : sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=', $post_type_name) . ($post_type_name === 'categories' ? 'uncategorized' : 'example')
+                            ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=', $rest_base) . ($post_type_name === 'pages' ? 'sample-page' : 'hello-world') . '&acf_format=standard&_fields=' . $this->get_detailed_fields_param()
+                            : sprintf('{{baseUrl}}/wp-json/wp/v2/%s?slug=', $rest_base) . 'example'
                     ),
                     'host'  => ['{{baseUrl}}'],
-                    'path'  => ['wp-json', 'wp', 'v2', $post_type_name],
-                    'query' => (
-                        in_array($post_type_name, ['pages', 'posts'], true)
-                        ? [
-                            [
-                                'key'   => 'slug',
-                                'value' => ($post_type_name === 'pages' ? 'sample-page' : 'hello-world'),
-                            ],
-                            [
-                                'key'   => 'acf_format',
-                                'value' => 'standard',
-                            ],
-                            [
-                                'key'   => '_fields',
-                                'value' => $this->get_detailed_fields_param(),
-                            ],
-                        ]
-                        : [
-                            [
-                                'key'   => 'slug',
-                                'value' => ($post_type_name === 'categories' ? 'uncategorized' : 'example'),
-                            ],
-                        ]
-                    ),
+                    'path'  => ['wp-json', 'wp', 'v2', $rest_base],
+                    'query' => $cpt_slug_query,
                 ],
-                'description' => sprintf('Get specific %s by slug', $singular_label) . (in_array($post_type_name, ['pages', 'posts']) ? ' with ACF fields' : ''),
+                'description' => sprintf('Get specific %s by slug', $singular_label) . (in_array($post_type_name, ['pages', 'posts'], true) ? ' with ACF fields' : ''),
             ],
         ], [
             'name'    => $singular_label . ' by ID',
@@ -1011,39 +1054,24 @@ class Postman_Routes {
                 'header'      => $this->get_default_headers(),
                 'url'         => [
                     'raw'   => (
-                        in_array($post_type_name, ['pages', 'posts'])
-                        ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $post_type_name) . $singular_label . 'ID}}?acf_format=standard&_fields=' . $this->get_detailed_fields_param()
-                        : sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $post_type_name) . $singular_label . 'ID}}'
+                        in_array($post_type_name, ['pages', 'posts'], true)
+                            ? sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $rest_base) . $singular_label . 'ID}}?acf_format=standard&_fields=' . $this->get_detailed_fields_param()
+                            : sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $rest_base) . $singular_label . 'ID}}'
                     ),
                     'host'  => ['{{baseUrl}}'],
-                    'path'  => ['wp-json', 'wp', 'v2', $post_type_name, '{{' . $singular_label . 'ID}}'],
-                    'query' => (
-                        in_array($post_type_name, ['pages', 'posts'])
-                        ? [
-                            [
-                                'key'   => 'acf_format',
-                                'value' => 'standard',
-                            ],
-                            [
-                                'key'   => '_fields',
-                                'value' => $this->get_detailed_fields_param(),
-                            ],
-                        ]
-                        : []
-                    ),
+                    'path'  => ['wp-json', 'wp', 'v2', $rest_base, '{{' . $singular_label . 'ID}}'],
+                    'query' => $cpt_id_query,
                 ],
-                'description' => sprintf('Get specific %s by ID', $singular_label) . (in_array($post_type_name, ['pages', 'posts']) ? ' with ACF fields' : ''),
+                'description' => sprintf('Get specific %s by ID', $singular_label) . (in_array($post_type_name, ['pages', 'posts'], true) ? ' with ACF fields' : ''),
             ],
         ], [
             'name'    => 'Create ' . $singular_label,
             'request' => [
                 'method'      => 'POST',
-                'header'      => [
-                    [
-                        'key'   => 'Content-Type',
-                        'value' => 'application/json',
-                    ],
-                ],
+                'header'      => array_merge(
+                    $this->get_auth_headers(),
+                    [['key' => 'Content-Type', 'value' => 'application/json']]
+                ),
                 'body'        => [
                     'mode' => 'raw',
                     'raw'  => wp_json_encode(
@@ -1057,9 +1085,9 @@ class Postman_Routes {
                     ),
                 ],
                 'url'         => [
-                    'raw'  => '{{baseUrl}}/wp-json/wp/v2/' . $post_type_name,
+                    'raw'  => '{{baseUrl}}/wp-json/wp/v2/' . $rest_base,
                     'host' => ['{{baseUrl}}'],
-                    'path' => ['wp-json', 'wp', 'v2', $post_type_name],
+                    'path' => ['wp-json', 'wp', 'v2', $rest_base],
                 ],
                 'description' => 'Create new ' . $singular_label,
             ],
@@ -1067,12 +1095,10 @@ class Postman_Routes {
             'name'    => 'Update ' . $singular_label,
             'request' => [
                 'method'      => 'POST',
-                'header'      => [
-                    [
-                        'key'   => 'Content-Type',
-                        'value' => 'application/json',
-                    ],
-                ],
+                'header'      => array_merge(
+                    $this->get_auth_headers(),
+                    [['key' => 'Content-Type', 'value' => 'application/json']]
+                ),
                 'body'        => [
                     'mode' => 'raw',
                     'raw'  => wp_json_encode(
@@ -1085,9 +1111,9 @@ class Postman_Routes {
                     ),
                 ],
                 'url'         => [
-                    'raw'  => sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $post_type_name) . $singular_label . 'ID}}',
-                    'host' => ['{{baseUrl}}'],
-                    'path' => ['wp-json', 'wp', 'v2', $post_type_name, '{{' . $singular_label . 'ID}}'],
+                    'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $rest_base) . $singular_label . 'ID}}',
+                    'host'  => ['{{baseUrl}}'],
+                    'path'  => ['wp-json', 'wp', 'v2', $rest_base, '{{' . $singular_label . 'ID}}'],
                 ],
                 'description' => sprintf('Update existing %s by ID', $singular_label),
             ],
@@ -1095,13 +1121,14 @@ class Postman_Routes {
             'name'    => 'Delete ' . $singular_label,
             'request' => [
                 'method'      => 'DELETE',
-                'header'      => [],
+                'header'      => $this->get_auth_headers(),
                 'url'         => [
-                    'raw'  => sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $post_type_name) . $singular_label . 'ID}}',
-                    'host' => ['{{baseUrl}}'],
-                    'path' => ['wp-json', 'wp', 'v2', $post_type_name, '{{' . $singular_label . 'ID}}'],
+                    'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/%s/{{', $rest_base) . $singular_label . 'ID}}',
+                    'host'  => ['{{baseUrl}}'],
+                    'path'  => ['wp-json', 'wp', 'v2', $rest_base, '{{' . $singular_label . 'ID}}'],
+                    'query' => $this->get_wp_delete_params(),
                 ],
-                'description' => sprintf('Delete %s by ID', $singular_label),
+                'description' => sprintf('Delete %s by ID. Add ?force=true to bypass Trash.', $singular_label),
             ],
         ]];
     }
@@ -1118,6 +1145,12 @@ class Postman_Routes {
             $page = get_page_by_path($slug, OBJECT, 'page');
             $page_title = $page ? $page->post_title : $slug;
 
+            $page_query = [
+                ['key' => 'slug', 'value' => $slug],
+                ['key' => 'acf_format', 'value' => 'standard'],
+                ['key' => '_fields', 'value' => $this->get_detailed_fields_param()],
+            ];
+            Postman_Param_Descriptions::enrich_query_params($page_query);
             $specific_pages_items[] = [
                 'name'    => $page_title,
                 'request' => [
@@ -1127,20 +1160,7 @@ class Postman_Routes {
                         'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/pages?slug=%s&acf_format=standard&_fields=%s', $slug, $this->get_detailed_fields_param()),
                         'host'  => ['{{baseUrl}}'],
                         'path'  => ['wp-json', 'wp', 'v2', 'pages'],
-                        'query' => [
-                            [
-                                'key'   => 'slug',
-                                'value' => $slug,
-                            ],
-                            [
-                                'key'   => 'acf_format',
-                                'value' => 'standard',
-                            ],
-                            [
-                                'key'   => '_fields',
-                                'value' => $this->get_detailed_fields_param(),
-                            ],
-                        ],
+                        'query' => $page_query,
                     ],
                     'description' => sprintf('Get %s by slug with ACF fields', $page_title),
                 ],
@@ -1172,6 +1192,15 @@ class Postman_Routes {
 			$term_id = (int) $term->term_id;
 			$name = (string) $term->name;
 
+			$cat_query = array_merge(
+				[
+					['key' => '_fields', 'value' => $this->get_posts_fields_param()],
+					['key' => 'categories', 'value' => (string) $term_id],
+				],
+				$this->get_wp_list_extra_params('posts'),
+				$this->get_pagination_params()
+			);
+			Postman_Param_Descriptions::enrich_query_params($cat_query);
 			$items[] = [
 				'name'    => sprintf('Posts in %s', $name),
 				'request' => [
@@ -1181,31 +1210,7 @@ class Postman_Routes {
 						'raw'   => sprintf('{{baseUrl}}/wp-json/wp/v2/posts?_fields=%s&categories=%d', $this->get_posts_fields_param(), $term_id),
 						'host'  => ['{{baseUrl}}'],
 						'path'  => ['wp-json', 'wp', 'v2', 'posts'],
-						'query' => [
-							[
-								'key'   => '_fields',
-								'value' => $this->get_posts_fields_param(),
-							],
-							[
-								'key'   => 'categories',
-								'value' => (string) $term_id,
-							],
-							[
-								'key'      => 'page',
-								'value'    => '1',
-								'disabled' => true,
-							],
-							[
-								'key'      => 'per_page',
-								'value'    => '10',
-								'disabled' => true,
-							],
-							[
-								'key'      => 'offset',
-								'value'    => '0',
-								'disabled' => true,
-							],
-						],
+						'query' => $cat_query,
 					],
 					'description' => sprintf('Get posts filtered by category \"%s\" (ID %d)', $name, $term_id),
 				],
@@ -1221,6 +1226,10 @@ class Postman_Routes {
             [
                 'key'   => 'baseUrl',
                 'value' => home_url(),
+            ],
+            [
+                'key'   => 'wpNonce',
+                'value' => '',
             ],
             [
                 'key'   => 'PostID',

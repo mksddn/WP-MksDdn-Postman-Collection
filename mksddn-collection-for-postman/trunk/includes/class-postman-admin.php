@@ -88,22 +88,28 @@ class Postman_Admin {
 
     private function get_pages(): array {
         return get_posts([
-            'post_type' => 'page',
-            'posts_per_page' => -1,
-            'orderby' => 'title',
-            'order' => 'ASC',
-            'post_status' => 'publish',
+            'post_type'              => 'page',
+            'posts_per_page'         => -1,
+            'orderby'                => 'title',
+            'order'                  => 'ASC',
+            'post_status'            => 'publish',
+            'no_found_rows'          => true,
+            'update_post_meta_cache' => false,
+            'update_post_term_cache' => false,
         ]);
     }
 
 
     private function get_posts(): array {
         return get_posts([
-            'post_type' => 'post',
-            'posts_per_page' => -1,
-            'orderby' => 'title',
-            'order' => 'ASC',
-            'post_status' => 'publish',
+            'post_type'              => 'post',
+            'posts_per_page'         => -1,
+            'orderby'                => 'title',
+            'order'                  => 'ASC',
+            'post_status'            => 'publish',
+            'no_found_rows'          => true,
+            'update_post_meta_cache' => false,
+            'update_post_term_cache' => false,
         ]);
     }
 
@@ -125,14 +131,20 @@ class Postman_Admin {
 
     private function get_custom_posts(array $custom_post_types): array {
         $custom_posts = [];
+        $query_args = [
+            'posts_per_page'         => -1,
+            'orderby'                => 'title',
+            'order'                  => 'ASC',
+            'post_status'            => 'publish',
+            'no_found_rows'          => true,
+            'update_post_meta_cache' => false,
+            'update_post_term_cache' => false,
+        ];
         foreach (array_keys($custom_post_types) as $post_type_name) {
-            $custom_posts[$post_type_name] = get_posts([
-                'post_type' => $post_type_name,
-                'posts_per_page' => -1,
-                'orderby' => 'title',
-                'order' => 'ASC',
-                'post_status' => 'publish',
-            ]);
+            $custom_posts[$post_type_name] = get_posts(array_merge(
+                $query_args,
+                ['post_type' => $post_type_name]
+            ));
         }
 
         return $custom_posts;
@@ -205,6 +217,13 @@ class Postman_Admin {
     }
 
 
+    private function get_export_format(): string {
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in handle_generation.
+        $format = isset($_POST['export_format']) ? sanitize_key((string) $_POST['export_format']) : 'postman';
+        return $format === 'openapi' ? 'openapi' : 'postman';
+    }
+
+
     private function render_admin_page(array $data): void {
         echo '<div class="wrap">';
         echo '<h1>' . esc_html__('Generate Postman Collection', 'mksddn-collection-for-postman') . '</h1>';
@@ -238,7 +257,11 @@ class Postman_Admin {
         $this->render_selection_buttons_acf();
         $this->render_acf_checkboxes($data);
 
-        echo '<br><button class="button button-primary" name="generate_postman">' . esc_html__('Generate and download collection', 'mksddn-collection-for-postman') . '</button>';
+        echo '<h3>' . esc_html__('Export format:', 'mksddn-collection-for-postman') . '</h3>';
+        echo '<p><label><input type="radio" name="export_format" value="postman" checked> ' . esc_html__('Postman Collection (JSON)', 'mksddn-collection-for-postman') . '</label></p>';
+        echo '<p><label><input type="radio" name="export_format" value="openapi"> ' . esc_html__('OpenAPI 3.0 (JSON)', 'mksddn-collection-for-postman') . '</label></p>';
+
+        echo '<br><button class="button button-primary" name="generate_postman">' . esc_html__('Generate and download', 'mksddn-collection-for-postman') . '</button>';
         echo '</form>';
     }
 
@@ -441,7 +464,8 @@ class Postman_Admin {
             $selected_data['custom_post_types'],
             $selected_data['acf_for_pages_list'],
             $selected_data['acf_for_posts_list'],
-            $selected_data['acf_for_cpt_lists']
+            $selected_data['acf_for_cpt_lists'],
+            $this->get_export_format()
         );
     }
 

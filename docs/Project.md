@@ -7,7 +7,7 @@
 
 ### MksDdn Postman Collection — проектная документация
 
-**Цель**: предоставить удобный способ генерировать Postman Collection для REST API WordPress-сайта из админки и использовать плагин как независимый пакет, распространяемый через WordPress.org SVN и обновляемый по стандартному механизму.
+**Цель**: предоставить удобный способ генерировать Postman Collection и OpenAPI 3.0 документацию для REST API WordPress-сайта из админки и использовать плагин как независимый пакет, распространяемый через WordPress.org SVN и обновляемый по стандартному механизму.
 
 Ссылка на стандарты WordPress плагинов: [Plugin Handbook](https://developer.wordpress.org/plugins/).
 
@@ -23,13 +23,16 @@
   - опциональное включение ACF полей в запросы списков (List of pages, List of posts, List of CPT) через чекбоксы в админке
 - Автоматическое включение SEO-данных Yoast (`yoast_head_json`) в параметр `_fields` для pages и posts при активном плагине Yoast SEO
 - Поддержка многоязычности через заголовок `Accept-Language` во всех GET-запросах
-- Скачивание JSON-файла коллекции из админки.
+- Скачивание JSON-файла коллекции (Postman) или OpenAPI 3.0 спецификации из админки.
 
 ### Архитектура и компоненты
 - Пакет плагина: `mksddn-postman-collection/`
   - `postman-collection.php` — точка входа плагина (инициализация, константы, автозагрузка, регистрация хуков)
-  - `includes/class-postman-admin.php` — админ-интерфейс: страница, форма выбора (страницы, категории и Custom Post Types), обработчик `admin_post_*`
-  - `includes/class-postman-generator.php` — сборка структуры коллекции и выдача JSON на скачивание (принимает выбранные страницы, категории и Custom Post Types)
+  - `includes/class-postman-admin.php` — админ-интерфейс: страница, форма выбора (страницы, категории и Custom Post Types), выбор формата экспорта (Postman/OpenAPI), обработчик `admin_post_*`
+  - `includes/class-postman-generator.php` — сборка структуры коллекции, выдача Postman JSON или OpenAPI 3.0 на скачивание
+  - `includes/class-postman-openapi-converter.php` — конвертация Postman Collection в OpenAPI 3.0; параметры, пагинация (X-WP-Total, X-WP-TotalPages), auth; ссылки на https://developer.wordpress.org/rest-api/
+  - `includes/class-postman-openapi-schemas.php` — OpenAPI schemas для WP сущностей (Post, Page, Term, User, Comment, Error) с ссылками на Reference; security schemes по https://developer.wordpress.org/rest-api/using-the-rest-api/authentication/
+  - `includes/class-postman-param-descriptions.php` — централизованные описания query/header/request body параметров для Postman и OpenAPI
   - `includes/class-postman-options.php` — извлечение и кэширование страниц опций через REST server и роуты
   - `includes/class-postman-routes.php` — генерация маршрутов для базовых сущностей, CPT, форм, индивидуальных страниц и списка постов по выбранным категориям
 
@@ -92,6 +95,8 @@ flowchart TD
   C --> E[Postman_Options]
   D --> F[Collection JSON]
   E --> D
+  C -->|openapi| G[OpenAPI_Converter]
+  G --> H[OpenAPI 3.0 JSON]
 ```
 
 ### Точки расширения и интеграции
@@ -102,7 +107,9 @@ flowchart TD
 - В планах: добавить собственные фильтры для модификации элементов коллекции и переменных (см. дорожную карту).
  - Добавлены фильтры расширения:
    - `mksddn_postman_collection` — модификация финального массива коллекции
-   - `mksddn_postman_filename` — переопределение имени экспортируемого файла
+   - `mksddn_postman_filename` — переопределение имени экспортируемого файла Postman
+   - `mksddn_postman_openapi_spec` — модификация OpenAPI 3.0 спецификации перед экспортом
+   - `mksddn_postman_openapi_filename` — переопределение имени файла OpenAPI
 
 ### Требования и совместимость
 - Требования:

@@ -3,7 +3,7 @@
 Plugin Name: MksDdn Collection for Postman
 Plugin URI: https://github.com/mksddn/WP-MksDdn-Postman-Collection
 Description: Generate Postman Collection (v2.1.0) for WordPress REST API from admin UI.
-Version: 1.1.0
+Version: 1.2.0
 Author: mksddn
 Author URI: https://github.com/mksddn
 Requires at least: 6.2
@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin constants
-define('POSTMAN_PLUGIN_VERSION', '1.1.0');
+define('POSTMAN_PLUGIN_VERSION', '1.2.0');
 define('POSTMAN_PLUGIN_PATH', __DIR__);
 define('POSTMAN_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('POSTMAN_PLUGIN_TEXT_DOMAIN', 'mksddn-collection-for-postman');
