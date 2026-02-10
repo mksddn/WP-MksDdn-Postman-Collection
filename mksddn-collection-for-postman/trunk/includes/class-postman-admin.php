@@ -65,8 +65,6 @@ class Postman_Admin {
             'selected_post_slugs' => $this->get_selected_post_slugs(),
             'selected_custom_slugs' => $this->get_selected_custom_slugs(),
             'selected_options_pages' => $this->get_selected_options_pages(),
-            'categories' => $this->get_categories(),
-            'selected_category_slugs' => $this->get_selected_category_slugs(),
             'selected_custom_post_types' => $this->get_selected_custom_post_types(),
             'include_woocommerce' => $this->get_include_woocommerce(),
         ];
@@ -113,22 +111,6 @@ class Postman_Admin {
             'update_post_term_cache' => false,
         ]);
     }
-
-	/**
-	 * Get categories terms.
-	 *
-	 * @return array List of WP_Term for taxonomy 'category'
-	 */
-	private function get_categories(): array {
-		$terms = get_terms([
-			'taxonomy' => 'category',
-			'hide_empty' => false,
-			'orderby' => 'name',
-			'order' => 'ASC',
-		]);
-		return is_array($terms) ? $terms : [];
-	}
-
 
     private function get_custom_posts(array $custom_post_types): array {
         $custom_posts = [];
@@ -185,13 +167,6 @@ class Postman_Admin {
     }
 
 
-    private function get_selected_category_slugs(): array {
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Used only to pre-fill admin form; nonce is verified on action submit and values are sanitized below.
-        $slugs = isset($_POST['custom_category_slugs']) ? (array) wp_unslash($_POST['custom_category_slugs']) : [];
-        return array_values(array_filter(array_map('sanitize_title', $slugs)));
-    }
-
-
     private function get_selected_custom_post_types(): array {
         // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Used only to pre-fill admin form; nonce is verified on action submit and values are sanitized below.
         $types = isset($_POST['custom_post_types']) ? (array) wp_unslash($_POST['custom_post_types']) : [];
@@ -226,10 +201,12 @@ class Postman_Admin {
         $this->render_pages_list($data['pages'], $data['selected_page_slugs']);
         $this->render_block_end();
 
-        $this->render_block_start(__('Add requests for posts by categories:', 'mksddn-collection-for-postman'));
-        $this->render_selection_buttons('custom_category_slugs');
-        $this->render_categories_list($data['categories'], $data['selected_category_slugs']);
-        $this->render_block_end();
+        if (!empty($data['custom_post_types'])) {
+            $this->render_block_start(__('Add requests for Custom Post Types:', 'mksddn-collection-for-postman'));
+            $this->render_selection_buttons('custom_post_types');
+            $this->render_custom_post_types_list($data['custom_post_types'], $data['selected_custom_post_types']);
+            $this->render_block_end();
+        }
 
         if (!empty($data['woocommerce_active'])) {
             $this->render_block_start(__('WooCommerce REST API:', 'mksddn-collection-for-postman'));
@@ -240,13 +217,6 @@ class Postman_Admin {
             echo '> ' . esc_html__('Include WooCommerce REST API (products, categories, orders)', 'mksddn-collection-for-postman') . '</label>';
             echo '</div>';
             echo '<p class="postman-admin-block__description">' . esc_html__('Requires WooCommerce. Auth: Consumer Key + Secret (Settings > Advanced > REST API).', 'mksddn-collection-for-postman') . '</p>';
-            $this->render_block_end();
-        }
-
-        if (!empty($data['custom_post_types'])) {
-            $this->render_block_start(__('Add requests for Custom Post Types:', 'mksddn-collection-for-postman'));
-            $this->render_selection_buttons('custom_post_types');
-            $this->render_custom_post_types_list($data['custom_post_types'], $data['selected_custom_post_types']);
             $this->render_block_end();
         }
 
@@ -289,22 +259,6 @@ class Postman_Admin {
             echo '<li><label><input type="checkbox" name="custom_page_slugs[]" value="' . esc_attr($slug) . '"';
             checked(in_array($slug, $selected_slugs, true), true);
             echo '> ' . esc_html($page->post_title) . ' <span class="postman-admin-block__slug">(' . esc_html($slug) . ')</span></label></li>';
-        }
-        echo '</ul></div>';
-    }
-
-
-    private function render_categories_list(array $categories, array $selected_slugs): void {
-        echo '<div class="postman-admin-block__content postman-admin-block__content--scrollable"><ul>';
-        foreach ($categories as $cat) {
-            $slug = isset($cat->slug) ? (string) $cat->slug : '';
-            $name = isset($cat->name) ? (string) $cat->name : $slug;
-            if ($slug === '') {
-                continue;
-            }
-            echo '<li><label><input type="checkbox" name="custom_category_slugs[]" value="' . esc_attr($slug) . '"';
-            checked(in_array($slug, $selected_slugs, true), true);
-            echo '> ' . esc_html($name) . ' <span class="postman-admin-block__slug">(' . esc_html($slug) . ')</span></label></li>';
         }
         echo '</ul></div>';
     }
@@ -368,7 +322,6 @@ class Postman_Admin {
             'post_slugs' => $this->get_selected_post_slugs(),
             'custom_slugs' => $this->get_selected_custom_slugs(),
             'options_pages' => $this->get_selected_options_pages(),
-            'category_slugs' => $this->get_selected_category_slugs(),
             'custom_post_types' => $selected_custom_post_types,
             'include_woocommerce' => $this->get_include_woocommerce(),
         ];
@@ -379,7 +332,6 @@ class Postman_Admin {
             $selected_data['post_slugs'],
             $selected_data['custom_slugs'],
             $selected_data['options_pages'],
-            $selected_data['category_slugs'],
             $selected_data['custom_post_types'],
             $acf_active,
             $acf_active,

@@ -19,7 +19,6 @@
   - пользовательские типы записей (CPT), включая специальные маршруты для `forms`
   - страницы опций (эндпоинты вида `/wp-json/custom/v1/options/...`)
   - индивидуально выбранные страницы по слагам
-  - выбор категорий и автоматические запросы постов по выбранным категориям
   - выбор Custom Post Types для включения в коллекцию
   - опциональное включение ACF полей в запросы списков (List of pages, List of posts, List of CPT) через чекбоксы в админке
 - Автоматическое включение SEO-данных Yoast (`yoast_head_json`) в параметр `_fields` для pages и posts при активном плагине Yoast SEO
@@ -36,7 +35,7 @@
   - `includes/class-postman-openapi-schemas.php` — OpenAPI schemas для WP сущностей (Post, Page, Term, User, Comment, Error) с ссылками на Reference; security schemes по https://developer.wordpress.org/rest-api/using-the-rest-api/authentication/
   - `includes/class-postman-param-descriptions.php` — централизованные описания query/header/request body параметров для Postman и OpenAPI
   - `includes/class-postman-options.php` — извлечение и кэширование страниц опций через REST server и роуты
-  - `includes/class-postman-routes.php` — генерация маршрутов для базовых сущностей, CPT, форм, индивидуальных страниц и списка постов по выбранным категориям
+  - `includes/class-postman-routes.php` — генерация маршрутов для базовых сущностей, CPT, форм, индивидуальных страниц
 
 Примечание по интеграции с формами:
 - Если установлен и активен плагин `mksddn-forms-handler`, коллекция для форм использует namespace `mksddn-forms-handler/v1` и пути `wp-json/mksddn-forms-handler/v1/forms` для list и submit; иначе — стандартные `wp/v2/forms`.

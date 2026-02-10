@@ -19,9 +19,6 @@ class Postman_CLI {
      * [--pages=<slugs>]
      * : Comma-separated page slugs to include as individual requests.
      *
-     * [--categories=<slugs>]
-     * : Comma-separated category slugs for posts by categories.
-     *
      * [--cpt=<types>]
      * : Comma-separated custom post types to include.
      *
@@ -34,12 +31,11 @@ class Postman_CLI {
      */
     public function export(array $args, array $assoc_args): void {
         $page_slugs = $this->parse_slugs($assoc_args['pages'] ?? '');
-        $category_slugs = $this->parse_slugs($assoc_args['categories'] ?? '');
         $cpt = $this->parse_cpt($assoc_args['cpt'] ?? '');
         $include_woocommerce = $this->parse_include_woocommerce($assoc_args['include-woocommerce'] ?? 'yes');
 
         $generator = new Postman_Generator();
-        $collection = $generator->generate_collection_array($page_slugs, $category_slugs, $cpt, $include_woocommerce);
+        $collection = $generator->generate_collection_array($page_slugs, $cpt, $include_woocommerce);
 
         $json = wp_json_encode($collection, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         if ($json === false) {
@@ -73,9 +69,6 @@ class Postman_CLI {
      * [--pages=<slugs>]
      * : Comma-separated page slugs to include as individual requests.
      *
-     * [--categories=<slugs>]
-     * : Comma-separated category slugs for posts by categories.
-     *
      * [--cpt=<types>]
      * : Comma-separated custom post types to include.
      *
@@ -88,12 +81,11 @@ class Postman_CLI {
      */
     public function export_openapi(array $args, array $assoc_args): void {
         $page_slugs = $this->parse_slugs($assoc_args['pages'] ?? '');
-        $category_slugs = $this->parse_slugs($assoc_args['categories'] ?? '');
         $cpt = $this->parse_cpt($assoc_args['cpt'] ?? '');
         $include_woocommerce = $this->parse_include_woocommerce($assoc_args['include-woocommerce'] ?? 'yes');
 
         $generator = new Postman_Generator();
-        $collection = $generator->generate_collection_array($page_slugs, $category_slugs, $cpt, $include_woocommerce);
+        $collection = $generator->generate_collection_array($page_slugs, $cpt, $include_woocommerce);
         $spec = $generator->generate_openapi_array($collection);
 
         $json = wp_json_encode($spec, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
