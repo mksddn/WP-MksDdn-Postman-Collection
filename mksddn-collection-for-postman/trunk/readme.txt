@@ -4,7 +4,7 @@ Tags: rest api, postman, collection, openapi, developer-tools
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.2.0
+Stable tag: 2.0.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,7 +52,7 @@ Yes. The plugin includes WP-CLI integration for command-line usage:
 
 Postman export:
 `wp mksddn-collection-for-postman export --file=postman_collection.json`
-`wp mksddn-collection-for-postman export --pages=home,about --categories=news --cpt=product`
+`wp mksddn-collection-for-postman export --pages=home,about --cpt=product`
 
 OpenAPI export:
 `wp mksddn-collection-for-postman export-openapi --file=openapi.json`
@@ -93,19 +93,14 @@ Note: This plugin does not send any user data to external services. The schema r
 1. Admin screen with page selection and download button.
 
 == Changelog ==
-= 1.2.1 =
-- New: WooCommerce REST API support (products, product categories, orders)
-- New: Admin checkbox to include/exclude WooCommerce routes
-- New: Basic Auth (Consumer Key/Secret) for WooCommerce endpoints in Postman and OpenAPI
-
-= 1.2.0 =
-- New: OpenAPI 3.0 export for API documentation (Swagger UI, Redoc)
-- New: Export format selection in admin (Postman / OpenAPI)
-- Changed: ACF/SCF fields now auto-included for all post types when plugin is active; removed admin checkboxes
-- New: WP-CLI command `export-openapi` for OpenAPI spec generation
-- New: Filter `mksddn_postman_openapi_spec` for OpenAPI customization
-- New: Filter `mksddn_postman_openapi_filename` for OpenAPI filename
-- New: OpenAPI schemas for WP entities (Post, Page, Term, User, Comment)
+= 2.0.0 =
+- New: OpenAPI 3.0 export (Swagger UI, Redoc)
+- New: WooCommerce REST API support with admin checkbox and Basic Auth
+- New: Unified block styles for admin export page
+- Changed: Removed category selection (Posts by Categories)
+- New: CLI option `--include-woocommerce` for export commands
+- Refactor: Centralized CPT filtering in Postman_Routes
+- Fixed: JSON encoding error handling in download and CLI
 
 = 1.1.0 =
 - New: Custom Post Types support with full CRUD operations (List, Get by Slug/ID, Create, Update, Delete)
