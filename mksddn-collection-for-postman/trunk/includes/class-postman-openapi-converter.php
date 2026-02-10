@@ -16,6 +16,8 @@ class Postman_OpenAPI_Converter {
 
     private int $operation_counter = 0;
 
+    private array $specific_page_slugs = [];
+
 
     public function __construct(?string $base_url = null) {
         $this->base_url = $base_url ?? home_url();
@@ -31,11 +33,13 @@ class Postman_OpenAPI_Converter {
     public function convert(array $collection): array {
         $this->paths = [];
         $this->operation_counter = 0;
+        $this->specific_page_slugs = [];
         $variables = $this->extract_variables($collection);
         $base_url = $variables['baseUrl'] ?? $this->base_url;
         $base_url = rtrim($base_url, '/');
 
         $this->process_items($collection['item'] ?? [], $base_url);
+        $this->enrich_pages_description_with_specific_slugs();
 
         $info = [
             'title'       => $collection['info']['name'] ?? 'WordPress REST API',
@@ -101,17 +105,56 @@ class Postman_OpenAPI_Converter {
         foreach ($items as $item) {
             $item_name = $item['name'] ?? '';
             
-            // Skip "Specific Pages" folder - these duplicate "by Slug" functionality
             if ($item_name === 'Specific Pages') {
+                $this->extract_specific_page_slugs($item['item'] ?? []);
                 continue;
             }
-            
+
             if (isset($item['item'])) {
                 $this->process_items($item['item'], $base_url);
             } elseif (isset($item['request'])) {
                 $this->convert_request($item['request'], $item_name, $base_url);
             }
         }
+    }
+
+
+    /**
+     * Extract slugs from Specific Pages folder items.
+     */
+    private function extract_specific_page_slugs(array $items): void {
+        foreach ($items as $item) {
+            $request = $item['request'] ?? null;
+            if (!is_array($request)) {
+                continue;
+            }
+            $url = $request['url'] ?? [];
+            if (is_string($url)) {
+                continue;
+            }
+            foreach ($url['query'] ?? [] as $q) {
+                if (($q['key'] ?? '') === 'slug' && !empty($q['value'])) {
+                    $this->specific_page_slugs[] = (string) $q['value'];
+                    break;
+                }
+            }
+        }
+    }
+
+
+    /**
+     * Append specific page slugs to pages GET description when available.
+     */
+    private function enrich_pages_description_with_specific_slugs(): void {
+        if ($this->specific_page_slugs === []) {
+            return;
+        }
+        $path = '/wp-json/wp/v2/pages';
+        if (!isset($this->paths[$path]['get']['description'])) {
+            return;
+        }
+        $slugs_list = implode(', ', array_unique($this->specific_page_slugs));
+        $this->paths[$path]['get']['description'] .= "\n\nSpecific pages in this export: " . $slugs_list . '.';
     }
 
 
