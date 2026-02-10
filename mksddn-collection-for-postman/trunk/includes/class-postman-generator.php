@@ -48,9 +48,13 @@ class Postman_Generator {
 
 
     private function filter_custom_post_types(array $post_types): array {
+        $exclude = ['page', 'post', 'attachment'];
+        if (class_exists('WooCommerce')) {
+            $exclude[] = 'product';
+        }
         $custom_post_types = [];
         foreach ($post_types as $post_type) {
-            if (!in_array($post_type->name, ['page', 'post', 'attachment'], true)) {
+            if (!in_array($post_type->name, $exclude, true)) {
                 $custom_post_types[$post_type->name] = $post_type;
             }
         }

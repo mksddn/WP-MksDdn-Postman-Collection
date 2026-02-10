@@ -91,9 +91,13 @@ class Postman_Admin {
 
 
     private function filter_custom_post_types(array $post_types): array {
+        $exclude = ['page', 'post', 'attachment'];
+        if ($this->is_woocommerce_active()) {
+            $exclude[] = 'product';
+        }
         $custom_post_types = [];
         foreach ($post_types as $post_type) {
-            if (!in_array($post_type->name, ['page', 'post', 'attachment'], true)) {
+            if (!in_array($post_type->name, $exclude, true)) {
                 $custom_post_types[$post_type->name] = $post_type;
             }
         }

@@ -46,7 +46,8 @@
 Примечание по интеграции с WooCommerce:
 - При активном плагине WooCommerce в коллекцию добавляется папка "WooCommerce" с маршрутами: Products (List, by ID, Create, Update, Delete), Product Categories (аналогично), Orders (аналогично)
 - Аутентификация: HTTP Basic Auth (Consumer Key + Consumer Secret). Ключи создаются в WooCommerce > Settings > Advanced > REST API
-- Переменные коллекции: `wcConsumerKey`, `wcConsumerSecret`, `ProductCategoryID`, `OrderID`; `ProductID` — из CPT
+- Переменные коллекции: `wcConsumerKey`, `wcConsumerSecret`, `ProductID`, `ProductCategoryID`, `OrderID`
+- CPT `product` исключается из списка Custom Post Types (маршруты уже в папке WooCommerce)
 
 Примечание по интеграции с Yoast SEO:
 - Если установлен и активен плагин Yoast SEO (`wordpress-seo/wp-seo.php`), параметр `_fields` для pages и posts автоматически дополняется значением `yoast_head_json`

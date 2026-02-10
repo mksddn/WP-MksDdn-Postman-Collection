@@ -1665,6 +1665,7 @@ class Postman_Routes {
         if ($this->is_woocommerce_active()) {
             $variables[] = ['key' => 'wcConsumerKey', 'value' => ''];
             $variables[] = ['key' => 'wcConsumerSecret', 'value' => ''];
+            $variables[] = ['key' => 'ProductID', 'value' => '1'];
             $variables[] = ['key' => 'ProductCategoryID', 'value' => '1'];
             $variables[] = ['key' => 'OrderID', 'value' => '1'];
         }
