@@ -45,10 +45,6 @@ class Postman_OpenAPI_Converter {
             'title'       => $collection['info']['name'] ?? 'WordPress REST API',
             'description' => 'OpenAPI 3.0 specification for WordPress REST API. Compatible with wp/v2 endpoints (posts, pages, terms, users, etc.) and custom namespaces. Aligned with [WordPress REST API Handbook](https://developer.wordpress.org/rest-api/). Authentication: Cookie/Nonce for same-origin, Application Passwords for external apps.',
             'version'     => '1.0.0',
-            'externalDocs' => [
-                'description' => 'WordPress REST API Handbook',
-                'url'         => 'https://developer.wordpress.org/rest-api/',
-            ],
         ];
 
         $servers = [
@@ -58,15 +54,21 @@ class Postman_OpenAPI_Converter {
             ],
         ];
 
+        $security_schemes = Postman_OpenAPI_Schemas::get_security_schemes($this->has_woocommerce_paths());
+
         $spec = [
-            'openapi' => self::OPENAPI_VERSION,
-            'info'    => $info,
-            'servers' => $servers,
-            'paths'   => $this->paths,
+            'openapi'    => self::OPENAPI_VERSION,
+            'info'       => $info,
+            'servers'    => $servers,
+            'paths'      => $this->paths,
             'components' => [
                 'schemas'   => Postman_OpenAPI_Schemas::get_schemas(),
                 'responses' => Postman_OpenAPI_Schemas::get_responses(),
-                'securitySchemes' => Postman_OpenAPI_Schemas::get_security_schemes(),
+                'securitySchemes' => $security_schemes,
+            ],
+            'externalDocs' => [
+                'description' => 'WordPress REST API Handbook',
+                'url'         => 'https://developer.wordpress.org/rest-api/',
             ],
         ];
 
@@ -499,6 +501,16 @@ class Postman_OpenAPI_Converter {
     }
 
 
+    private function has_woocommerce_paths(): bool {
+        foreach (array_keys($this->paths) as $path) {
+            if (str_contains($path, '/wc/')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
     private function extract_tags_from_path(string $path): array {
         if (preg_match('#/wp-json/([^/]+)/v\d+/([^/]+)#', $path, $m)) {
             return [$m[1] . ' - ' . $m[2]];
@@ -776,6 +788,7 @@ class Postman_OpenAPI_Converter {
             'offset' => [
                 'type'    => 'integer',
                 'minimum' => 0,
+                'example' => 0,
             ],
             'context' => [
                 'type'    => 'string',
@@ -831,11 +844,34 @@ class Postman_OpenAPI_Converter {
             ],
         };
 
-        if (!isset($schema['default']) && !isset($schema['example']) && $postman_value !== null && $postman_value !== '') {
-            $schema['example'] = is_array($postman_value) ? $postman_value : (string) $postman_value;
+        $params_no_example = ['slug'];
+        if (!isset($schema['default']) && !isset($schema['example']) && $postman_value !== null && $postman_value !== '' && !in_array($key, $params_no_example, true)) {
+            $schema['example'] = $this->cast_example_to_schema_type($schema, $postman_value);
         }
 
         return $schema;
+    }
+
+
+    /**
+     * Cast example value to match schema type (OpenAPI validation).
+     * Integer/number must use numeric type, not string.
+     */
+    private function cast_example_to_schema_type(array $schema, mixed $value): mixed {
+        if (is_array($value)) {
+            return $value;
+        }
+        $type = $schema['type'] ?? 'string';
+        if ($type === 'integer' && is_numeric($value)) {
+            return (int) $value;
+        }
+        if ($type === 'number' && is_numeric($value)) {
+            return (float) $value;
+        }
+        if ($type === 'boolean') {
+            return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+        }
+        return (string) $value;
     }
 
 }

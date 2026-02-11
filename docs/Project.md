@@ -32,7 +32,7 @@
   - `assets/css/admin.css` — унифицированные стили блоков страницы экспорта. Структура блока: `postman-admin-block` (обёртка), `postman-admin-block__title`, `postman-admin-block__actions` (кнопки), `postman-admin-block__content` (варианты: `--scrollable` для списков, `--options` для чекбоксов/радио), `postman-admin-block__description`. Новый блок: `render_block_start()` → контент → `render_block_end()`.
   - `includes/class-postman-generator.php` — сборка структуры коллекции, выдача Postman JSON или OpenAPI 3.0 на скачивание
   - `includes/class-postman-openapi-converter.php` — конвертация Postman Collection в OpenAPI 3.0; параметры, пагинация (X-WP-Total, X-WP-TotalPages), auth; ссылки на https://developer.wordpress.org/rest-api/
-  - `includes/class-postman-openapi-schemas.php` — OpenAPI schemas для WP сущностей (Post, Page, Term, User, Comment, Error) с ссылками на Reference; security schemes по https://developer.wordpress.org/rest-api/using-the-rest-api/authentication/
+  - `includes/class-postman-openapi-schemas.php` — OpenAPI schemas (WP_REST_Error для error responses); security schemes по https://developer.wordpress.org/rest-api/using-the-rest-api/authentication/; wcBasicAuth включается только при наличии WooCommerce paths в коллекции
   - `includes/class-postman-param-descriptions.php` — централизованные описания query/header/request body параметров для Postman и OpenAPI
   - `includes/class-postman-options.php` — извлечение и кэширование страниц опций через REST server и роуты
   - `includes/class-postman-routes.php` — генерация маршрутов для базовых сущностей, CPT, форм, индивидуальных страниц
