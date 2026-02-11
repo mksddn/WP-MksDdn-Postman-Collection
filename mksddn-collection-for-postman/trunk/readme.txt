@@ -4,7 +4,7 @@ Tags: rest api, postman, collection, openapi, developer-tools
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 2.0.0
+Stable tag: 2.0.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -93,6 +93,10 @@ Note: This plugin does not send any user data to external services. The schema r
 1. Admin screen with page selection and download button.
 
 == Changelog ==
+= 2.0.1 =
+- OpenAPI: WooCommerce paths support, improved security scheme handling
+- OpenAPI schemas: WP_REST_Error for error responses, streamlined example casting
+
 = 2.0.0 =
 - New: OpenAPI 3.0 export (Swagger UI, Redoc)
 - New: WooCommerce REST API support with admin checkbox and Basic Auth
