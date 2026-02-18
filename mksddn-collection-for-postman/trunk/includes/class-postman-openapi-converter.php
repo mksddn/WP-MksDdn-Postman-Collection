@@ -323,7 +323,7 @@ class Postman_OpenAPI_Converter {
         }
 
         foreach ($request['header'] ?? [] as $h) {
-            if (empty($h['key']) || !empty($h['disabled']) || strtolower($h['key']) === 'content-type') {
+            if (empty($h['key']) || strtolower($h['key']) === 'content-type') {
                 continue;
             }
             $header_desc = $h['description'] ?? Postman_Param_Descriptions::get_header($h['key']);
