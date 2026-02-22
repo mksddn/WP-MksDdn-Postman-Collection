@@ -4,7 +4,7 @@ Tags: rest api, postman, collection, openapi, developer-tools
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 2.0.2
+Stable tag: 2.1.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -93,6 +93,14 @@ Note: This plugin does not send any user data to external services. The schema r
 1. Admin screen with page selection and download button.
 
 == Changelog ==
+= 2.1.0 =
+- New: Support for registered REST routes in Postman collection; admin can select custom namespaces to include
+- New: Postman_Registered_Routes builds items from WordPress registered routes with demo request bodies for POST/PUT/PATCH
+- New: Filter `mksddn_postman_registered_route_demo_body` to customize demo body for registered routes
+- New: Default and auth headers applied to registered routes request items
+- Changed: OpenAPI converter — improved request body handling, schema inference for JSON bodies, Accept headers
+- Refactor: Postman_Generator deduplication and path normalization for registered routes
+
 = 2.0.2 =
 - OpenAPI: include all request headers in spec (e.g. Accept-Language for i18n), regardless of Postman disabled state
 

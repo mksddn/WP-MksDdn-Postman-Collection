@@ -36,6 +36,7 @@
   - `includes/class-postman-param-descriptions.php` — централизованные описания query/header/request body параметров для Postman и OpenAPI
   - `includes/class-postman-options.php` — извлечение и кэширование страниц опций через REST server и роуты
   - `includes/class-postman-routes.php` — генерация маршрутов для базовых сущностей, CPT, форм, индивидуальных страниц
+  - `includes/class-postman-registered-routes.php` — сбор зарегистрированных REST-маршрутов из реестра WP (`rest_get_server()->get_routes()`), группировка по namespace, нормализация путей и дедупликация
 
 Примечание по интеграции с формами:
 - Если установлен и активен плагин `mksddn-forms-handler`, коллекция для форм использует namespace `mksddn-forms-handler/v1` и пути `wp-json/mksddn-forms-handler/v1/forms` для list и submit; иначе — стандартные `wp/v2/forms`.
@@ -70,6 +71,13 @@
 - Поддерживается параметр `_fields` для оптимизации ответа
 - Поиск работает через стандартный WordPress REST API endpoint `/wp-json/wp/v2/search`
 
+Примечание по зарегистрированным маршрутам:
+- Источник: реестр WordPress REST API (`rest_get_server()->get_routes()`), учитывается `show_in_index`
+- В коллекции добавляется папка «Registered Routes» с подпапками по namespace; каждый маршрут и метод — отдельный запрос
+- В админке блок «Add custom registered REST routes:» — список namespace для включения (как у страниц: отметил = включить). Показываются только «кастомные» namespace: из списка исключены core (`wp/v2`) и WooCommerce (`wc/v3`). Тема может сузить список до своих маршрутов через фильтр `mksddn_postman_registered_routes_theme_namespaces`
+- Опция `mksddn_postman_registered_routes`: хранит `selected_namespaces` (массив выбранных для включения)
+- Пути нормализуются для Postman: regex `(?P<id>[\d]+)` → `:id`; дубликаты с ручными маршрутами не добавляются
+
 Примечание по пагинации:
 - Все запросы типа "List of ..." (List of Posts, List of Pages, List of any CPT и т.п.) автоматически включают параметры пагинации `page` и `per_page`
 - Параметры пагинации по умолчанию отключены (`disabled: true`) в Postman, чтобы не влиять на существующие запросы
@@ -96,8 +104,10 @@ flowchart TD
   B --> C[Postman_Generator]
   C --> D[Postman_Routes]
   C --> E[Postman_Options]
+  C --> F2[Postman_Registered_Routes]
   D --> F[Collection JSON]
   E --> D
+  F2 --> F
   C -->|openapi| G[OpenAPI_Converter]
   G --> H[OpenAPI 3.0 JSON]
 ```

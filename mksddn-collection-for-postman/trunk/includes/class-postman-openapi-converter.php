@@ -180,7 +180,8 @@ class Postman_OpenAPI_Converter {
         }
 
         $operation_id = $this->generate_operation_id($name, $path, $method);
-        $parameters = $this->convert_parameters($url, $request);
+        $request_body = $this->convert_request_body($request);
+        $parameters = $this->convert_parameters($url, $request, $request_body !== null);
         
         $postman_description = trim($request['description'] ?? '');
         if ($this->is_good_description($postman_description, $name)) {
@@ -217,11 +218,8 @@ class Postman_OpenAPI_Converter {
             ];
         }
 
-        if (in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
-            $request_body = $this->convert_request_body($request);
-            if ($request_body !== null) {
-                $operation['requestBody'] = $request_body;
-            }
+        if (in_array($method, ['POST', 'PUT', 'PATCH'], true) && $request_body !== null) {
+            $operation['requestBody'] = $request_body;
         }
 
         $tags = $this->extract_tags_from_path($path);
@@ -276,7 +274,12 @@ class Postman_OpenAPI_Converter {
     }
 
 
-    private function convert_parameters(array $url, array $request): array {
+    /**
+     * @param array $url           Postman URL object
+     * @param array $request      Postman request
+     * @param bool  $has_body      When true, skip Accept header (defined by requestBody.content)
+     */
+    private function convert_parameters(array $url, array $request, bool $has_body = false): array {
         $params = [];
 
         foreach ($url['query'] ?? [] as $q) {
@@ -326,6 +329,9 @@ class Postman_OpenAPI_Converter {
             if (empty($h['key']) || strtolower($h['key']) === 'content-type') {
                 continue;
             }
+            if ($has_body && strtolower($h['key']) === 'accept') {
+                continue;
+            }
             $header_desc = $h['description'] ?? Postman_Param_Descriptions::get_header($h['key']);
             $params[] = [
                 'name'        => $h['key'],
@@ -354,15 +360,17 @@ class Postman_OpenAPI_Converter {
             if (is_string($raw)) {
                 $decoded = json_decode($raw, true);
                 if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $properties = $this->infer_schema_from_object($decoded);
+                    $schema = ['type' => 'object'];
+                    if ($properties !== []) {
+                        $schema['properties'] = $properties;
+                    }
                     return [
                         'required' => true,
                         'content'  => [
                             'application/json' => [
-                                'schema'   => [
-                                    'type'       => 'object',
-                                    'properties' => $this->infer_schema_from_object($decoded),
-                                ],
-                                'example'  => $decoded,
+                                'schema'  => $schema,
+                                'example' => $decoded,
                             ],
                         ],
                     ];
