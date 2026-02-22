@@ -82,6 +82,9 @@ class Postman_Admin {
 
     private function get_registered_routes_selected(): array {
         $saved = get_option(self::OPTION_REGISTERED_ROUTES, []);
+        if (!is_array($saved)) {
+            return [];
+        }
         return is_array($saved['selected_namespaces'] ?? null) ? $saved['selected_namespaces'] : [];
     }
 

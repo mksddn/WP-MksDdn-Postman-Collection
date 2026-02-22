@@ -118,6 +118,10 @@ class Postman_Registered_Routes {
         $by_namespace = [];
         $added = [];
 
+        $routes_handler = new Postman_Routes();
+        $default_headers = $routes_handler->get_default_headers_for_registered_routes();
+        $auth_headers = $routes_handler->get_auth_headers_for_registered_routes();
+
         foreach ($routes as $pattern => $endpoints) {
             $endpoints = self::normalize_endpoints($endpoints);
             foreach ($endpoints as $endpoint) {
@@ -146,7 +150,7 @@ class Postman_Registered_Routes {
                     if (!isset($by_namespace[$ns])) {
                         $by_namespace[$ns] = [];
                     }
-                    $by_namespace[$ns][] = self::build_request_item($path_with_base, $method, $readable_path, $ns, $endpoint);
+                    $by_namespace[$ns][] = self::build_request_item($path_with_base, $method, $readable_path, $ns, $endpoint, $default_headers, $auth_headers);
                 }
             }
         }
@@ -271,10 +275,11 @@ class Postman_Registered_Routes {
         return array_values(array_intersect($methods, $allowed));
     }
 
-    private static function build_request_item(string $path_with_base, string $method, string $readable_path, string $namespace, array $endpoint = []): array {
-        $routes = new Postman_Routes();
-        $default_headers = $routes->get_default_headers_for_registered_routes();
-        $auth_headers = $routes->get_auth_headers_for_registered_routes();
+    /**
+     * @param array $default_headers From Postman_Routes (reused for all items).
+     * @param array $auth_headers     From Postman_Routes (reused for all items).
+     */
+    private static function build_request_item(string $path_with_base, string $method, string $readable_path, string $namespace, array $endpoint = [], array $default_headers = [], array $auth_headers = []): array {
         $needs_auth = in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true);
         $headers = $needs_auth ? array_merge($default_headers, $auth_headers) : $default_headers;
 
@@ -301,15 +306,7 @@ class Postman_Registered_Routes {
         ];
 
         if (in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
-            $request['header'] = array_merge(
-                $request['header'],
-            if ($demo_body === []) {
-                $demo_body = self::builtin_demo_body_for_path($path_with_base);
-            }
-                [['key' => 'Content-Type', 'value' => 'application/json']]
-            );
             $demo_body = self::args_to_demo_body($endpoint['args'] ?? [], $readable_path);
-            $raw_body = $demo_body !== [] ? wp_json_encode($demo_body, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) : '{}';
             /**
              * Filter demo body for registered route POST/PUT/PATCH (e.g. when endpoint has no args).
              *
@@ -319,6 +316,10 @@ class Postman_Registered_Routes {
              * @param string               $namespace     Namespace e.g. contents/v1.
              */
             $demo_body = (array) apply_filters('mksddn_postman_registered_route_demo_body', $demo_body, $path_with_base, $method, $namespace);
+            $request['header'] = array_merge(
+                $request['header'],
+                [['key' => 'Content-Type', 'value' => 'application/json']]
+            );
             $request['body'] = [
                 'mode' => 'raw',
                 'raw'  => wp_json_encode($demo_body, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),

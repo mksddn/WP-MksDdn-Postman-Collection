@@ -104,8 +104,10 @@ flowchart TD
   B --> C[Postman_Generator]
   C --> D[Postman_Routes]
   C --> E[Postman_Options]
+  C --> F2[Postman_Registered_Routes]
   D --> F[Collection JSON]
   E --> D
+  F2 --> F
   C -->|openapi| G[OpenAPI_Converter]
   G --> H[OpenAPI 3.0 JSON]
 ```
