@@ -311,6 +311,26 @@ class Postman_Routes {
     }
 
 
+    /**
+     * Public access to default headers for reuse (e.g. Registered Routes).
+     *
+     * @return array
+     */
+    public function get_default_headers_for_registered_routes(): array {
+        return $this->get_default_headers();
+    }
+
+
+    /**
+     * Public access to auth headers for reuse (e.g. Registered Routes).
+     *
+     * @return array
+     */
+    public function get_auth_headers_for_registered_routes(): array {
+        return $this->get_auth_headers();
+    }
+
+
     public function get_basic_routes(bool $acf_for_pages_list = false, bool $acf_for_posts_list = false): array {
         $basic_routes = [];
         $acf_active = self::is_acf_or_scf_active();

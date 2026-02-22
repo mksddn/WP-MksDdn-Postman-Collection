@@ -3,7 +3,7 @@
 /**
  * @file: includes/class-postman-generator.php
  * @description: Build and export Postman Collection JSON and OpenAPI structure.
- * @dependencies: Postman_Options, Postman_Routes, Postman_OpenAPI_Converter
+ * @dependencies: Postman_Options, Postman_Routes, Postman_Registered_Routes, Postman_OpenAPI_Converter
  * @created: 2025-08-19
  */
 class Postman_Generator {
@@ -22,11 +22,11 @@ class Postman_Generator {
     }
 
 
-    public function generate_and_download(array $selected_page_slugs, array $selected_post_slugs, array $selected_custom_slugs, array $selected_options_pages, array $selected_custom_post_types = [], bool $acf_for_pages_list = false, bool $acf_for_posts_list = false, array $acf_for_cpt_lists = [], bool $include_woocommerce = true, string $format = 'postman'): void {
+    public function generate_and_download(array $selected_page_slugs, array $selected_post_slugs, array $selected_custom_slugs, array $selected_options_pages, array $selected_custom_post_types = [], bool $acf_for_pages_list = false, bool $acf_for_posts_list = false, array $acf_for_cpt_lists = [], bool $include_woocommerce = true, string $format = 'postman', array $selected_registered_namespaces = []): void {
         $post_types = get_post_types(['public' => true], 'objects');
         $custom_post_types = Postman_Routes::filter_custom_post_types($post_types);
 
-        $collection = $this->build_collection($custom_post_types, $selected_page_slugs, $selected_custom_post_types, $acf_for_pages_list, $acf_for_posts_list, $acf_for_cpt_lists, $include_woocommerce);
+        $collection = $this->build_collection($custom_post_types, $selected_page_slugs, $selected_custom_post_types, $acf_for_pages_list, $acf_for_posts_list, $acf_for_cpt_lists, $include_woocommerce, $selected_registered_namespaces);
 
         if ($format === 'openapi') {
             $this->download_openapi($collection);
@@ -40,7 +40,7 @@ class Postman_Generator {
      * Build collection and return as array without sending download headers.
      * Intended for programmatic usage (e.g., WP-CLI).
      */
-    public function generate_collection_array(array $selected_page_slugs, array $selected_custom_post_types = [], bool $include_woocommerce = true): array {
+    public function generate_collection_array(array $selected_page_slugs, array $selected_custom_post_types = [], bool $include_woocommerce = true, array $selected_registered_namespaces = []): array {
         $post_types = get_post_types(['public' => true], 'objects');
         $custom_post_types = Postman_Routes::filter_custom_post_types($post_types);
         $acf_active = Postman_Routes::is_acf_or_scf_active();
@@ -51,12 +51,13 @@ class Postman_Generator {
             $acf_active,
             $acf_active,
             $acf_active ? $selected_custom_post_types : [],
-            $include_woocommerce
+            $include_woocommerce,
+            $selected_registered_namespaces
         );
     }
 
 
-    private function build_collection(array $custom_post_types, array $selected_page_slugs, array $selected_custom_post_types = [], bool $acf_for_pages_list = false, bool $acf_for_posts_list = false, array $acf_for_cpt_lists = [], bool $include_woocommerce = true): array {
+    private function build_collection(array $custom_post_types, array $selected_page_slugs, array $selected_custom_post_types = [], bool $acf_for_pages_list = false, bool $acf_for_posts_list = false, array $acf_for_cpt_lists = [], bool $include_woocommerce = true, array $selected_registered_namespaces = []): array {
         $items = [];
 
         // Basic Routes
@@ -104,6 +105,14 @@ class Postman_Generator {
         $individual_routes = $this->routes_handler->get_individual_page_routes($selected_page_slugs);
         $items = array_merge($items, $individual_routes);
 
+        if ($selected_registered_namespaces !== []) {
+            $existing_keys = self::collect_path_method_keys($items);
+            $registered_folder = Postman_Registered_Routes::get_registered_routes_folder($selected_registered_namespaces, $existing_keys);
+            if (!empty($registered_folder['item'])) {
+                $items[] = $registered_folder;
+            }
+        }
+
         $collection = [
             'info' => $this->get_collection_info(),
             'item' => $items,
@@ -118,6 +127,74 @@ class Postman_Generator {
          * @param array $selected_page_slugs Selected page slugs.
          */
         return (array) apply_filters('mksddn_postman_collection', $collection, $custom_post_types, $selected_page_slugs);
+    }
+
+
+    /**
+     * Walk collection items and collect normalized path => methods for deduplication.
+     *
+     * @param array $items Top-level collection item array (folders/requests).
+     * @return array<string, array<string>> Map of normalized path to list of HTTP methods.
+     */
+    private static function collect_path_method_keys(array $items): array {
+        $keys = [];
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            if (isset($item['request'])) {
+                $path = self::normalize_path_from_request($item['request']);
+                if ($path !== '' && isset($item['request']['method'])) {
+                    $method = strtoupper((string) $item['request']['method']);
+                    if (!isset($keys[$path])) {
+                        $keys[$path] = [];
+                    }
+                    if (!in_array($method, $keys[$path], true)) {
+                        $keys[$path][] = $method;
+                    }
+                }
+            }
+            if (isset($item['item']) && is_array($item['item'])) {
+                $nested = self::collect_path_method_keys($item['item']);
+                foreach ($nested as $p => $methods) {
+                    if (!isset($keys[$p])) {
+                        $keys[$p] = [];
+                    }
+                    foreach ($methods as $m) {
+                        if (!in_array($m, $keys[$p], true)) {
+                            $keys[$p][] = $m;
+                        }
+                    }
+                }
+            }
+        }
+        return $keys;
+    }
+
+
+    /**
+     * Extract and normalize path from a Postman request (path or raw url).
+     * Replaces {{variable}} with :id for comparison with registered routes.
+     */
+    private static function normalize_path_from_request(array $request): string {
+        $url = $request['url'] ?? null;
+        if (!is_array($url)) {
+            return '';
+        }
+        if (isset($url['path']) && is_array($url['path'])) {
+            $path = '/' . implode('/', array_map('strval', $url['path']));
+            $path = preg_replace('/\{\{[^}]+\}\}/', ':id', $path);
+            return $path;
+        }
+        if (isset($url['raw']) && is_string($url['raw'])) {
+            $raw = $url['raw'];
+            if (preg_match('#^\{\{baseUrl\}\}(/[^?]*)#', $raw, $m)) {
+                $path = $m[1];
+                $path = preg_replace('/\{\{[^}]+\}\}/', ':id', $path);
+                return $path;
+            }
+        }
+        return '';
     }
 
 

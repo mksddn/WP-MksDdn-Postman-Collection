@@ -19,6 +19,8 @@ class Postman_Admin {
 
     private const CAPABILITY = 'manage_options';
 
+    private const OPTION_REGISTERED_ROUTES = 'mksddn_postman_registered_routes';
+
     private readonly Postman_Options $options_handler;
 
 
@@ -72,7 +74,15 @@ class Postman_Admin {
             'selected_options_pages' => $this->get_selected_options_pages(),
             'selected_custom_post_types' => $this->get_selected_custom_post_types(),
             'include_woocommerce' => $this->get_include_woocommerce(),
+            'registered_routes_namespaces' => Postman_Registered_Routes::get_theme_or_custom_namespaces(),
+            'registered_routes_selected' => $this->get_registered_routes_selected(),
         ];
+    }
+
+
+    private function get_registered_routes_selected(): array {
+        $saved = get_option(self::OPTION_REGISTERED_ROUTES, []);
+        return is_array($saved['selected_namespaces'] ?? null) ? $saved['selected_namespaces'] : [];
     }
 
 
@@ -226,6 +236,23 @@ class Postman_Admin {
             $this->render_block_end();
         }
 
+        $this->render_block_start(__('Add custom registered REST routes:', 'mksddn-collection-for-postman'));
+        $namespaces = $data['registered_routes_namespaces'] ?? [];
+        $selected = $data['registered_routes_selected'] ?? [];
+        if ($namespaces !== []) {
+            $this->render_selection_buttons('registered_routes_selected');
+            echo '<div class="postman-admin-block__content postman-admin-block__content--scrollable"><ul>';
+            foreach ($namespaces as $ns) {
+                echo '<li><label><input type="checkbox" name="registered_routes_selected[]" value="' . esc_attr($ns) . '"';
+                checked(in_array($ns, $selected, true), true);
+                echo '> ' . esc_html($ns) . '</label></li>';
+            }
+            echo '</ul></div>';
+        } else {
+            echo '<p class="postman-admin-block__description">' . esc_html__('No custom REST namespaces found. Routes from the active or parent theme can be listed here.', 'mksddn-collection-for-postman') . '</p>';
+        }
+        $this->render_block_end();
+
         $this->render_block_start(__('Export format:', 'mksddn-collection-for-postman'));
         echo '<div class="postman-admin-block__content postman-admin-block__content--options">';
         echo '<label><input type="radio" name="export_format" value="postman" checked> ' . esc_html__('Postman Collection (JSON)', 'mksddn-collection-for-postman') . '</label>';
@@ -323,6 +350,14 @@ class Postman_Admin {
         $acf_active = Postman_Routes::is_acf_or_scf_active();
         $selected_custom_post_types = $this->get_selected_custom_post_types();
 
+        $selected_namespaces = isset($_POST['registered_routes_selected']) && is_array($_POST['registered_routes_selected'])
+            ? array_values(array_filter(array_map('sanitize_text_field', wp_unslash($_POST['registered_routes_selected']))))
+            : [];
+
+        update_option(self::OPTION_REGISTERED_ROUTES, [
+            'selected_namespaces' => $selected_namespaces,
+        ]);
+
         $selected_data = [
             'page_slugs' => $this->get_selected_page_slugs(),
             'post_slugs' => $this->get_selected_post_slugs(),
@@ -343,7 +378,8 @@ class Postman_Admin {
             $acf_active,
             $acf_active ? $selected_custom_post_types : [],
             $selected_data['include_woocommerce'],
-            $this->get_export_format()
+            $this->get_export_format(),
+            $selected_namespaces
         );
     }
 
