@@ -146,7 +146,7 @@ class Postman_Registered_Routes {
                     if (!isset($by_namespace[$ns])) {
                         $by_namespace[$ns] = [];
                     }
-                    $by_namespace[$ns][] = self::build_request_item($path_with_base, $method, $readable_path, $ns);
+                    $by_namespace[$ns][] = self::build_request_item($path_with_base, $method, $readable_path, $ns, $endpoint);
                 }
             }
         }
@@ -271,7 +271,7 @@ class Postman_Registered_Routes {
         return array_values(array_intersect($methods, $allowed));
     }
 
-    private static function build_request_item(string $path_with_base, string $method, string $readable_path, string $namespace): array {
+    private static function build_request_item(string $path_with_base, string $method, string $readable_path, string $namespace, array $endpoint = []): array {
         $routes = new Postman_Routes();
         $default_headers = $routes->get_default_headers_for_registered_routes();
         $auth_headers = $routes->get_auth_headers_for_registered_routes();
@@ -303,11 +303,25 @@ class Postman_Registered_Routes {
         if (in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
             $request['header'] = array_merge(
                 $request['header'],
+            if ($demo_body === []) {
+                $demo_body = self::builtin_demo_body_for_path($path_with_base);
+            }
                 [['key' => 'Content-Type', 'value' => 'application/json']]
             );
+            $demo_body = self::args_to_demo_body($endpoint['args'] ?? [], $readable_path);
+            $raw_body = $demo_body !== [] ? wp_json_encode($demo_body, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) : '{}';
+            /**
+             * Filter demo body for registered route POST/PUT/PATCH (e.g. when endpoint has no args).
+             *
+             * @param array<string, mixed> $demo_body Example key-value for request body.
+             * @param string               $path_with_base Full path e.g. /wp-json/contents/v1/forms/career.
+             * @param string               $method        HTTP method.
+             * @param string               $namespace     Namespace e.g. contents/v1.
+             */
+            $demo_body = (array) apply_filters('mksddn_postman_registered_route_demo_body', $demo_body, $path_with_base, $method, $namespace);
             $request['body'] = [
                 'mode' => 'raw',
-                'raw'  => '{}',
+                'raw'  => wp_json_encode($demo_body, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
             ];
         }
 
@@ -315,5 +329,51 @@ class Postman_Registered_Routes {
             'name'    => $name,
             'request' => $request,
         ];
+    }
+
+    /**
+     * Build demo request body from endpoint args (type, default, enum) for POST/PUT/PATCH.
+     * Skips args that are path params (e.g. slug, id when path contains :slug, :id).
+     *
+     * @param array<string, array> $args Endpoint args from REST route registration.
+     * @param string               $path Readable path (e.g. /contents/v1/forms/career).
+     * @return array<string, mixed> Object suitable for JSON body.
+     */
+    private static function args_to_demo_body(array $args, string $path): array {
+        $path_params = [];
+        if (preg_match_all('/:(\w+)/', $path, $m)) {
+            $path_params = array_flip($m[1]);
+        }
+        $body = [];
+        foreach ($args as $key => $schema) {
+            if (!is_array($schema) || isset($path_params[$key])) {
+                continue;
+            }
+            $body[$key] = self::arg_default_value($schema);
+        }
+        return $body;
+    }
+
+    /**
+     * Single arg schema to example value (string, number, boolean, array, object, default, enum).
+     *
+     * @param array $schema One entry from endpoint args.
+     * @return mixed
+     */
+    private static function arg_default_value(array $schema) {
+        if (array_key_exists('default', $schema)) {
+            return $schema['default'];
+        }
+        if (isset($schema['enum']) && is_array($schema['enum']) && $schema['enum'] !== []) {
+            return $schema['enum'][0];
+        }
+        $type = $schema['type'] ?? 'string';
+        return match ($type) {
+            'integer', 'number' => 0,
+            'boolean' => false,
+            'array' => [],
+            'object' => (object) [],
+            default => '',
+        };
     }
 }
